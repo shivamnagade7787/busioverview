@@ -40,7 +40,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 const navItems = [
@@ -111,13 +111,66 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     };
 
     try {
+      const businessId = `biz_${Date.now()}`;
+      const newBusiness = {
+        id: businessId,
+        name: businessName,
+        currency: '₹',
+      };
+
+      // Save to global businesses collection for multi-device access
+      await setDoc(doc(db, 'businesses', businessId), {
+        ...newBusiness,
+        ownerId: user.uid,
+        createdAt: new Date().toISOString()
+      });
+
       await updateDoc(doc(db, 'users', user.uid), {
         businesses: arrayUnion(newBusiness),
+        businessIds: arrayUnion(newBusiness.id),
         currentBusinessId: newBusiness.id
       });
       toast.success('New business added');
     } catch (error) {
       toast.error('Failed to add business');
+    }
+  };
+
+  const handleJoinBusiness = async () => {
+    if (!user || !profile) return;
+    
+    const businessId = prompt('Enter Business ID to join:');
+    if (!businessId) return;
+
+    if (profile.businesses.find(b => b.id === businessId)) {
+      toast.error('You are already a member of this business');
+      return;
+    }
+
+    try {
+      const bizDoc = await getDoc(doc(db, 'businesses', businessId));
+      if (!bizDoc.exists()) {
+        toast.error('Business not found. Please check the ID.');
+        return;
+      }
+
+      const bizData = bizDoc.data();
+      const businessToJoin = {
+        id: bizData.id,
+        name: bizData.name,
+        currency: bizData.currency || '₹',
+      };
+
+      await updateDoc(doc(db, 'users', user.uid), {
+        businesses: arrayUnion(businessToJoin),
+        businessIds: arrayUnion(businessToJoin.id),
+        currentBusinessId: businessToJoin.id
+      });
+      
+      toast.success(`Joined ${bizData.name} successfully!`);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to join business');
     }
   };
 
@@ -135,8 +188,10 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
     try {
       const remainingBusinesses = profile.businesses.filter(b => b.id !== businessId);
+      const remainingBusinessIds = profile.businessIds.filter(id => id !== businessId);
       await updateDoc(doc(db, 'users', user.uid), {
         businesses: remainingBusinesses,
+        businessIds: remainingBusinessIds,
         currentBusinessId: remainingBusinesses[0].id
       });
       toast.success('Business deleted');
@@ -280,10 +335,16 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                   ))}
                   
                   {profile && (profile.businesses || []).length < 3 && (
-                    <DropdownMenuItem onClick={handleAddBusiness} className="text-primary font-bold">
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Add New Business</span>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem onClick={handleAddBusiness} className="text-primary font-bold">
+                        <Plus className="mr-2 h-4 w-4" />
+                        <span>Add New Business</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleJoinBusiness} className="text-primary font-bold">
+                        <Plus className="mr-2 h-4 w-4" />
+                        <span>Join Existing Business</span>
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuGroup>
                 

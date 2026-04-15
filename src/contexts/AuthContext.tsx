@@ -55,7 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const data = doc.data() as UserProfile;
           setProfile({
             ...data,
-            businesses: data.businesses || []
+            businesses: data.businesses || [],
+            businessIds: data.businessIds || (data.businesses || []).map(b => b.id)
           });
         } else {
           setProfile(null);

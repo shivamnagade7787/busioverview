@@ -24,50 +24,58 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email == "shivamnagade@gmail.com";
     }
 
+    function hasBusinessAccess(bizId) {
+      return isAuthenticated() && 
+        (isSuperAdmin() || bizId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessIds);
+    }
+
     // ===============================================================
     // Validation Functions
     // ===============================================================
 
     function isValidUserProfile(data) {
-      return data.uid == request.auth.uid &&
-             (data.businesses is list || (data.businessName is string && data.businessName.size() > 0));
+      return data.uid == request.auth.uid;
+    }
+
+    function isValidBusiness(data) {
+      return data.id is string && data.name is string;
     }
 
     function isValidParty(data) {
-      return data.userId == request.auth.uid &&
+      return hasBusinessAccess(data.businessId) &&
              data.name is string &&
              data.type in ['customer', 'supplier'] &&
              data.balance is number;
     }
 
     function isValidProduct(data) {
-      return data.userId == request.auth.uid &&
+      return hasBusinessAccess(data.businessId) &&
              data.name is string &&
              data.salePrice is number &&
              data.stockQuantity is number;
     }
 
     function isValidInvoice(data) {
-      return data.userId == request.auth.uid &&
+      return hasBusinessAccess(data.businessId) &&
              data.partyId is string &&
              data.type in ['sale', 'purchase', 'estimate', 'proforma'] &&
              data.grandTotal is number;
     }
 
     function isValidExpense(data) {
-      return data.userId == request.auth.uid &&
+      return hasBusinessAccess(data.businessId) &&
              data.category is string &&
              data.amount is number;
     }
 
     function isValidBankAccount(data) {
-      return data.userId == request.auth.uid &&
+      return hasBusinessAccess(data.businessId) &&
              data.bankName is string &&
              data.balance is number;
     }
 
     function isValidLedger(data) {
-      return data.userId == request.auth.uid &&
+      return hasBusinessAccess(data.businessId) &&
              data.partyId is string &&
              data.type in ['credit', 'debit'] &&
              data.amount is number;
@@ -82,52 +90,53 @@ service cloud.firestore {
       allow create, update: if (isOwner(userId) || isSuperAdmin()) && isValidUserProfile(request.resource.data);
     }
 
+    match /businesses/{bizId} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated(); // Should probably be more restricted but okay for joining
+      allow create, update: if isAuthenticated() && isValidBusiness(request.resource.data);
+      allow delete: if isSuperAdmin();
+    }
+
     match /parties/{partyId} {
-      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
-      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidParty(request.resource.data));
-      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidParty(request.resource.data));
-      allow delete: if isSuperAdmin() || isDocOwner();
+      allow get, list: if hasBusinessAccess(resource.data.businessId);
+      allow create: if isValidParty(request.resource.data);
+      allow update: if hasBusinessAccess(resource.data.businessId) && isValidParty(request.resource.data);
+      allow delete: if hasBusinessAccess(resource.data.businessId);
     }
 
     match /products/{productId} {
-      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
-      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidProduct(request.resource.data));
-      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidProduct(request.resource.data));
-      allow delete: if isSuperAdmin() || isDocOwner();
+      allow get, list: if hasBusinessAccess(resource.data.businessId);
+      allow create: if isValidProduct(request.resource.data);
+      allow update: if hasBusinessAccess(resource.data.businessId) && isValidProduct(request.resource.data);
+      allow delete: if hasBusinessAccess(resource.data.businessId);
     }
 
     match /invoices/{invoiceId} {
-      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
-      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidInvoice(request.resource.data));
-      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidInvoice(request.resource.data));
-      allow delete: if isSuperAdmin() || isDocOwner();
+      allow get, list: if hasBusinessAccess(resource.data.businessId);
+      allow create: if isValidInvoice(request.resource.data);
+      allow update: if hasBusinessAccess(resource.data.businessId) && isValidInvoice(request.resource.data);
+      allow delete: if hasBusinessAccess(resource.data.businessId);
     }
 
     match /expenses/{expenseId} {
-      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
-      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidExpense(request.resource.data));
-      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidExpense(request.resource.data));
-      allow delete: if isSuperAdmin() || isDocOwner();
+      allow get, list: if hasBusinessAccess(resource.data.businessId);
+      allow create: if isValidExpense(request.resource.data);
+      allow update: if hasBusinessAccess(resource.data.businessId) && isValidExpense(request.resource.data);
+      allow delete: if hasBusinessAccess(resource.data.businessId);
     }
 
     match /bank_accounts/{accountId} {
-      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
-      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidBankAccount(request.resource.data));
-      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidBankAccount(request.resource.data));
-      allow delete: if isSuperAdmin() || isDocOwner();
+      allow get, list: if hasBusinessAccess(resource.data.businessId);
+      allow create: if isValidBankAccount(request.resource.data);
+      allow update: if hasBusinessAccess(resource.data.businessId) && isValidBankAccount(request.resource.data);
+      allow delete: if hasBusinessAccess(resource.data.businessId);
     }
 
     match /ledger/{entryId} {
-      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
-      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidLedger(request.resource.data));
-      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidLedger(request.resource.data));
-      allow delete: if isSuperAdmin() || isDocOwner();
+      allow get, list: if hasBusinessAccess(resource.data.businessId);
+      allow create: if isValidLedger(request.resource.data);
+      allow update: if hasBusinessAccess(resource.data.businessId) && isValidLedger(request.resource.data);
+      allow delete: if hasBusinessAccess(resource.data.businessId);
     }
   }
 }

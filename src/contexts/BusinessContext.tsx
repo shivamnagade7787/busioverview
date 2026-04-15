@@ -55,12 +55,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setLoading(true);
 
-    const qParties = query(collection(db, 'parties'), where('userId', '==', user.uid), where('businessId', '==', businessId), orderBy('createdAt', 'desc'));
-    const qProducts = query(collection(db, 'products'), where('userId', '==', user.uid), where('businessId', '==', businessId), orderBy('createdAt', 'desc'));
-    const qInvoices = query(collection(db, 'invoices'), where('userId', '==', user.uid), where('businessId', '==', businessId), orderBy('date', 'desc'));
-    const qExpenses = query(collection(db, 'expenses'), where('userId', '==', user.uid), where('businessId', '==', businessId), orderBy('date', 'desc'));
-    const qBankAccounts = query(collection(db, 'bank_accounts'), where('userId', '==', user.uid), where('businessId', '==', businessId), orderBy('createdAt', 'desc'));
-    const qLedger = query(collection(db, 'ledger'), where('userId', '==', user.uid), where('businessId', '==', businessId), orderBy('date', 'desc'));
+    const qParties = query(collection(db, 'parties'), where('businessId', '==', businessId), orderBy('createdAt', 'desc'));
+    const qProducts = query(collection(db, 'products'), where('businessId', '==', businessId), orderBy('createdAt', 'desc'));
+    const qInvoices = query(collection(db, 'invoices'), where('businessId', '==', businessId), orderBy('date', 'desc'));
+    const qExpenses = query(collection(db, 'expenses'), where('businessId', '==', businessId), orderBy('date', 'desc'));
+    const qBankAccounts = query(collection(db, 'bank_accounts'), where('businessId', '==', businessId), orderBy('createdAt', 'desc'));
+    const qLedger = query(collection(db, 'ledger'), where('businessId', '==', businessId), orderBy('date', 'desc'));
 
     const unsubscribeParties = onSnapshot(qParties, (snapshot) => {
       setParties(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Party)));

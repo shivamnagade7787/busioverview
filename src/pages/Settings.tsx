@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { db } from '@/src/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { User, Building2, Coins, MapPin, Phone, FileText, QrCode, Languages, Layout } from 'lucide-react';
+import { User, Building2, Coins, MapPin, Phone, FileText, QrCode, Languages, Layout, Copy } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function Settings() {
@@ -50,6 +50,30 @@ export default function Settings() {
       await updateDoc(doc(db, 'users', user.uid), {
         businesses: updatedBusinesses
       });
+
+      // Also update global businesses collection
+      await updateDoc(doc(db, 'businesses', currentBusiness.id), {
+        name,
+        currency,
+        gstNumber,
+        address,
+        phone,
+        upiId,
+        invoiceTemplate,
+        language,
+        updatedAt: new Date().toISOString()
+      }).catch(err => {
+        // If it doesn't exist in global collection yet (old business), create it
+        if (err.code === 'not-found') {
+          setDoc(doc(db, 'businesses', currentBusiness.id), {
+            ...currentBusiness,
+            name, currency, gstNumber, address, phone, upiId, invoiceTemplate, language,
+            ownerId: user.uid,
+            createdAt: new Date().toISOString()
+          });
+        }
+      });
+
       toast.success('Business settings updated');
     } catch (error) {
       console.error(error);
@@ -226,7 +250,21 @@ export default function Settings() {
               </div>
               <div className="p-4 bg-slate-50 rounded-lg border border-border-main">
                 <div className="text-[11px] text-text-muted uppercase font-bold mb-1">Business ID</div>
-                <div className="text-[11px] font-mono text-text-muted break-all">{currentBusiness?.id}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[11px] font-mono text-text-muted break-all">{currentBusiness?.id}</div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon-sm" 
+                    onClick={() => {
+                      if (currentBusiness?.id) {
+                        navigator.clipboard.writeText(currentBusiness.id);
+                        toast.success('Business ID copied to clipboard');
+                      }
+                    }}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

@@ -26,6 +26,7 @@ export interface UserProfile {
   email: string;
   currentBusinessId: string;
   businesses: Business[];
+  businessIds: string[];
   darkMode?: boolean;
   createdAt: string;
 }
