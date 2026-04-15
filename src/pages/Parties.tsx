@@ -184,16 +184,32 @@ export default function Parties() {
 
   const sendWhatsApp = (party: Party) => {
     const upiLink = currentBusiness?.upiId 
-      ? `upi://pay?pa=${currentBusiness.upiId}&pn=${encodeURIComponent(currentBusiness.name)}&cu=INR`
+      ? `upi://pay?pa=${currentBusiness.upiId}&pn=${encodeURIComponent(currentBusiness.name)}&cu=INR&am=${Math.abs(party.balance)}`
       : '';
     
-    let message = `Hello ${party.name}, this is a reminder regarding your outstanding balance of ${currency}${Math.abs(party.balance)} with ${currentBusiness?.name}.`;
+    const language = currentBusiness?.language || 'en';
     
-    if (upiLink) {
-      message += `\n\nYou can pay using this UPI link: ${upiLink}\nOr pay to UPI ID: ${currentBusiness?.upiId}`;
+    const messages = {
+      en: {
+        reminder: `Hello ${party.name}, this is a reminder regarding your outstanding balance of ${currency}${Math.abs(party.balance)} with ${currentBusiness?.name}.`,
+        upi: `You can pay using this UPI link: ${upiLink}\nOr pay to UPI ID: ${currentBusiness?.upiId}`,
+        footer: `Please settle it at your earliest convenience. Thank you!`
+      },
+      mr: {
+        reminder: `नमस्कार ${party.name}, ${currentBusiness?.name} कडील तुमची ${currency}${Math.abs(party.balance)} ची थकबाकी भरण्याबाबत ही आठवण आहे.`,
+        upi: `तुम्ही या UPI लिंकद्वारे पैसे भरू शकता: ${upiLink}\nकिंवा या UPI आयडीवर पाठवा: ${currentBusiness?.upiId}`,
+        footer: `कृपया लवकरात लवकर थकबाकी भरा. धन्यवाद!`
+      }
+    };
+
+    const m = messages[language];
+    let message = m.reminder;
+    
+    if (upiLink && party.balance > 0) {
+      message += `\n\n${m.upi}`;
     }
     
-    message += `\n\nPlease settle it at your earliest convenience. Thank you!`;
+    message += `\n\n${m.footer}`;
     
     window.open(`https://wa.me/${party.phone}?text=${encodeURIComponent(message)}`, '_blank');
   };

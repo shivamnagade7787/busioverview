@@ -18,7 +18,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { User, Building2, Coins, MapPin, Phone, FileText, QrCode } from 'lucide-react';
+import { User, Building2, Coins, MapPin, Phone, FileText, QrCode, Languages, Layout } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function Settings() {
@@ -37,11 +37,13 @@ export default function Settings() {
     const address = formData.get('address') as string;
     const phone = formData.get('phone') as string;
     const upiId = formData.get('upiId') as string;
+    const invoiceTemplate = formData.get('invoiceTemplate') as any;
+    const language = formData.get('language') as any;
 
     try {
       const updatedBusinesses = profile.businesses.map(b => 
         b.id === currentBusiness.id 
-          ? { ...b, name, currency, gstNumber, address, phone, upiId }
+          ? { ...b, name, currency, gstNumber, address, phone, upiId, invoiceTemplate, language }
           : b
       );
 
@@ -146,6 +148,35 @@ export default function Settings() {
                   placeholder="Full business address for invoices"
                   className="border-border-main"
                 />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="invoiceTemplate" className="text-[13px] font-semibold">Invoice Template</Label>
+                  <Select name="invoiceTemplate" defaultValue={currentBusiness?.invoiceTemplate || 'classic'}>
+                    <SelectTrigger className="border-border-main">
+                      <SelectValue placeholder="Select template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="classic">Classic (Standard)</SelectItem>
+                      <SelectItem value="modern">Modern (Stylish)</SelectItem>
+                      <SelectItem value="compact">Compact (Small)</SelectItem>
+                      <SelectItem value="professional">Professional (Business)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="language" className="text-[13px] font-semibold">Communication Language</Label>
+                  <Select name="language" defaultValue={currentBusiness?.language || 'en'}>
+                    <SelectTrigger className="border-border-main">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="mr">Marathi (मराठी)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="pt-4">

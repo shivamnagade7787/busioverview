@@ -65,7 +65,7 @@ export default function Sales() {
   const [searchTerm, setSearchTerm] = useState('');
   
   // New Invoice State
-  const [selectedPartyId, setSelectedPartyId] = useState('');
+  const [selectedPartyId, setSelectedPartyId] = useState('walk-in');
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('sale');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -73,6 +73,10 @@ export default function Sales() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState('');
   const [quickAmount, setQuickAmount] = useState(0);
+
+  const [isSendOpen, setIsSendOpen] = useState(false);
+  const [sendInvoice, setSendInvoice] = useState(true);
+  const [sendLanguage, setSendLanguage] = useState<'en' | 'mr'>(currentBusiness?.language || 'en');
 
   const currency = profile?.currency || '₹';
   const businessId = profile?.currentBusinessId;
@@ -152,12 +156,14 @@ export default function Sales() {
         transaction.set(invoiceRef, invoiceData);
 
         // 2. Update Party Balance
-        const partyRef = doc(db, 'parties', selectedPartyId);
-        const partyDoc = await transaction.get(partyRef);
-        if (partyDoc.exists()) {
-          const currentBalance = partyDoc.data().balance || 0;
-          const balanceChange = totals.grandTotal - paidAmount;
-          transaction.update(partyRef, { balance: currentBalance + balanceChange });
+        if (selectedPartyId !== 'walk-in') {
+          const partyRef = doc(db, 'parties', selectedPartyId);
+          const partyDoc = await transaction.get(partyRef);
+          if (partyDoc.exists()) {
+            const currentBalance = partyDoc.data().balance || 0;
+            const balanceChange = totals.grandTotal - paidAmount;
+            transaction.update(partyRef, { balance: currentBalance + balanceChange });
+          }
         }
 
         // 3. Update Product Stock (only if items exist)
@@ -190,45 +196,101 @@ export default function Sales() {
   };
 
   const sendWhatsAppReceipt = (invoice: Invoice) => {
-    const party = parties.find(p => p.id === invoice.partyId);
-    if (!party) return;
-
+    const party = parties.find(p => p.id === invoice.partyId) || { name: 'Walk-in Customer', phone: '' };
     const upiLink = currentBusiness?.upiId 
-      ? `upi://pay?pa=${currentBusiness.upiId}&pn=${encodeURIComponent(currentBusiness.name)}&am=${invoice.grandTotal}&cu=INR`
+      ? `upi://pay?pa=${currentBusiness.upiId}&pn=${encodeURIComponent(currentBusiness.name)}&am=${invoice.grandTotal - invoice.paidAmount}&cu=INR`
       : '';
 
-    let message = `Hello ${party.name},\n\nThank you for your business with ${currentBusiness?.name}.\n\nInvoice: ${invoice.invoiceNumber}\nDate: ${new Date(invoice.date).toLocaleDateString()}\nTotal Amount: ${currency}${invoice.grandTotal}\nPaid: ${currency}${invoice.paidAmount}\nBalance: ${currency}${invoice.grandTotal - invoice.paidAmount}`;
+    const messages = {
+      en: {
+        greeting: `Hello ${party.name},`,
+        thanks: `Thank you for your business with ${currentBusiness?.name}.`,
+        invoice: `Invoice: ${invoice.invoiceNumber}`,
+        date: `Date: ${new Date(invoice.date).toLocaleDateString()}`,
+        total: `Total Amount: ${currency}${invoice.grandTotal}`,
+        paid: `Paid: ${currency}${invoice.paidAmount}`,
+        balance: `Balance: ${currency}${invoice.grandTotal - invoice.paidAmount}`,
+        upi: `You can pay the balance using this UPI link: ${upiLink}\nOr pay to UPI ID: ${currentBusiness?.upiId}`,
+        regards: `Regards,\n${currentBusiness?.name}`
+      },
+      mr: {
+        greeting: `नमस्कार ${party.name},`,
+        thanks: `${currentBusiness?.name} सोबत व्यवसाय केल्याबद्दल धन्यवाद.`,
+        invoice: `बीजक क्रमांक: ${invoice.invoiceNumber}`,
+        date: `दिनांक: ${new Date(invoice.date).toLocaleDateString()}`,
+        total: `एकूण रक्कम: ${currency}${invoice.grandTotal}`,
+        paid: `भरलेली रक्कम: ${currency}${invoice.paidAmount}`,
+        balance: `शिल्लक: ${currency}${invoice.grandTotal - invoice.paidAmount}`,
+        upi: `तुम्ही या UPI लिंकद्वारे शिल्लक रक्कम भरू शकता: ${upiLink}\nकिंवा या UPI आयडीवर पाठवा: ${currentBusiness?.upiId}`,
+        regards: `आपला,\n${currentBusiness?.name}`
+      }
+    };
+
+    const m = messages[sendLanguage];
+    let message = `${m.greeting}\n\n${m.thanks}\n\n${m.invoice}\n${m.date}\n${m.total}\n${m.paid}\n${m.balance}`;
     
-    if (upiLink) {
-      message += `\n\nYou can pay the balance using this UPI link: ${upiLink}\nOr pay to UPI ID: ${currentBusiness?.upiId}`;
+    if (upiLink && (invoice.grandTotal - invoice.paidAmount) > 0) {
+      message += `\n\n${m.upi}`;
     }
     
-    message += `\n\nRegards,\n${currentBusiness?.name}`;
+    if (sendInvoice) {
+      message += `\n\nDownload Invoice: ${window.location.origin}/invoice/${invoice.id}`;
+    }
+
+    message += `\n\n${m.regards}`;
     
     window.open(`https://wa.me/${party.phone}?text=${encodeURIComponent(message)}`, '_blank');
+    setIsSendOpen(false);
   };
 
   const generatePDF = (invoice: Invoice) => {
     const doc = new jsPDF();
     const party = parties.find(p => p.id === invoice.partyId);
+    const template = currentBusiness?.invoiceTemplate || 'classic';
     
+    // Theme Colors
+    const colors = {
+      classic: [79, 70, 229], // Indigo
+      modern: [16, 185, 129], // Emerald
+      compact: [107, 114, 128], // Gray
+      professional: [30, 41, 59] // Slate
+    };
+    const themeColor = colors[template] || colors.classic;
+
     // Header
-    doc.setFontSize(20);
-    doc.text(currentBusiness?.name || 'Vyapar-X', 14, 22);
-    doc.setFontSize(10);
-    doc.text(currentBusiness?.address || '', 14, 30);
-    doc.text(`GST: ${currentBusiness?.gstNumber || 'N/A'}`, 14, 35);
+    if (template === 'modern') {
+      doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text(currentBusiness?.name || 'Vyapar-X', 14, 25);
+      doc.setFontSize(10);
+      doc.text(currentBusiness?.address || '', 14, 33);
+      doc.setTextColor(0, 0, 0);
+    } else {
+      doc.setFontSize(20);
+      doc.setTextColor(themeColor[0], themeColor[1], themeColor[2]);
+      doc.text(currentBusiness?.name || 'Vyapar-X', 14, 22);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text(currentBusiness?.address || '', 14, 30);
+      doc.text(`GST: ${currentBusiness?.gstNumber || 'N/A'}`, 14, 35);
+    }
     
     // Invoice Info
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.text('INVOICE', 140, 22);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(`Invoice No: ${invoice.invoiceNumber}`, 140, 30);
     doc.text(`Date: ${new Date(invoice.date).toLocaleDateString()}`, 140, 35);
     
     // Bill To
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.text('Bill To:', 14, 55);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(party?.name || 'Walk-in Customer', 14, 62);
     doc.text(party?.address || '', 14, 67);
@@ -247,8 +309,8 @@ export default function Sales() {
       startY: 85,
       head: [['Item', 'Qty', 'Price', 'GST', 'Total']],
       body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229] }
+      theme: template === 'compact' ? 'plain' : 'grid',
+      headStyles: { fillColor: themeColor }
     });
     
     // Totals
@@ -269,7 +331,7 @@ export default function Sales() {
   };
 
   const resetForm = () => {
-    setSelectedPartyId('');
+    setSelectedPartyId('walk-in');
     setInvoiceItems([]);
     setPaidAmount(0);
     setNotes('');
@@ -467,9 +529,14 @@ export default function Sales() {
 
             <DialogFooter className="border-t pt-4">
               <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateInvoice} className="gap-2">
-                <Calculator className="w-4 h-4" /> Generate Invoice
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={handleCreateInvoice} className="gap-2">
+                  <Plus className="w-4 h-4" /> Add Sale
+                </Button>
+                <Button onClick={handleCreateInvoice} className="gap-2">
+                  <Calculator className="w-4 h-4" /> Generate Invoice
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -513,10 +580,10 @@ export default function Sales() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
-                        {parties.find(p => p.id === inv.partyId)?.name.substring(0, 2).toUpperCase() || '??'}
+                        {inv.partyId === 'walk-in' ? 'WC' : parties.find(p => p.id === inv.partyId)?.name.substring(0, 2).toUpperCase() || '??'}
                       </div>
                       <span className="text-sm font-medium">
-                        {parties.find(p => p.id === inv.partyId)?.name || 'Unknown Party'}
+                        {inv.partyId === 'walk-in' ? 'Walk-in Customer' : parties.find(p => p.id === inv.partyId)?.name || 'Unknown Party'}
                       </span>
                     </div>
                   </TableCell>
@@ -547,7 +614,11 @@ export default function Sales() {
                           <DropdownMenuItem onClick={() => generatePDF(inv)}>
                             <Download className="mr-2 h-4 w-4" /> Download PDF
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => sendWhatsAppReceipt(inv)} className="text-success">
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedInvoice(inv);
+                            setSendLanguage(currentBusiness?.language || 'en');
+                            setIsSendOpen(true);
+                          }} className="text-success">
                             <MessageSquare className="mr-2 h-4 w-4" /> WhatsApp
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDeleteInvoice(inv)} className="text-danger">
@@ -562,6 +633,52 @@ export default function Sales() {
             </TableBody>
           </Table>
         </div>
+        <Dialog open={isSendOpen} onOpenChange={setIsSendOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Send Receipt via WhatsApp</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-text-muted">Select Language</label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={sendLanguage === 'en' ? 'default' : 'outline'} 
+                    className="flex-1"
+                    onClick={() => setSendLanguage('en')}
+                  >
+                    English
+                  </Button>
+                  <Button 
+                    variant={sendLanguage === 'mr' ? 'default' : 'outline'} 
+                    className="flex-1"
+                    onClick={() => setSendLanguage('mr')}
+                  >
+                    Marathi (मराठी)
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-bold">Include Invoice Link</div>
+                  <div className="text-xs text-text-muted">Send a link to download the PDF invoice</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={sendInvoice} 
+                  onChange={(e) => setSendInvoice(e.target.checked)}
+                  className="w-5 h-5 accent-primary"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsSendOpen(false)}>Cancel</Button>
+              <Button onClick={() => selectedInvoice && sendWhatsAppReceipt(selectedInvoice)} className="gap-2">
+                <MessageSquare className="w-4 h-4" /> Send on WhatsApp
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

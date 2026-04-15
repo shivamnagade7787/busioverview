@@ -16,7 +16,8 @@ import {
   ShoppingCart,
   Receipt,
   Users,
-  Package
+  Package,
+  QrCode
 } from 'lucide-react';
 import { 
   Table, 
@@ -65,9 +66,13 @@ export default function Dashboard() {
     
     const bankBalance = bankAccounts.reduce((acc, b) => acc + b.balance, 0);
     
+    const onlineSales = invoices
+      .filter(i => i.type === 'sale' && i.paymentMode === 'upi')
+      .reduce((acc, i) => acc + i.grandTotal, 0);
+    
     const netProfit = totalSales - totalPurchases - totalExpenses;
 
-    return { totalSales, totalPurchases, totalExpenses, receivable, payable, bankBalance, netProfit };
+    return { totalSales, totalPurchases, totalExpenses, receivable, payable, bankBalance, netProfit, onlineSales };
   }, [invoices, parties, expenses, bankAccounts]);
 
   const chartData = useMemo(() => {
@@ -163,6 +168,19 @@ export default function Dashboard() {
           <div className="text-2xl font-bold text-danger">{currency}{(stats.payable || 0).toLocaleString()}</div>
           <div className="text-[11px] mt-2 text-text-muted font-medium">
             To {parties.filter(p => p.type === 'supplier' && p.balance < 0).length} suppliers
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex justify-between items-start mb-2">
+            <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold">Online Sales (UPI)</div>
+            <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+              <QrCode className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-indigo-600">{currency}{(stats.onlineSales || 0).toLocaleString()}</div>
+          <div className="text-[11px] mt-2 text-text-muted font-medium">
+            Via UPI Payments
           </div>
         </div>
       </div>

@@ -17,6 +17,8 @@ export interface Business {
   currency: string;
   upiId?: string;
   logoUrl?: string;
+  invoiceTemplate?: 'classic' | 'modern' | 'compact' | 'professional';
+  language?: 'en' | 'mr';
 }
 
 export interface UserProfile {
@@ -87,6 +89,7 @@ export interface Invoice {
   paymentStatus: PaymentStatus;
   paymentMode: PaymentMode;
   notes?: string;
+  billImageUrl?: string;
   createdAt: string;
 }
 

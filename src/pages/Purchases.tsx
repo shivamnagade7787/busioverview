@@ -21,7 +21,9 @@ import {
   ArrowRight,
   MoreVertical,
   Edit2,
-  Download
+  Download,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import { 
   Dialog, 
@@ -64,6 +66,7 @@ export default function Purchases() {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('cash');
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState('');
+  const [billImageUrl, setBillImageUrl] = useState<string | null>(null);
 
   const currency = profile?.currency || '₹';
   const businessId = profile?.currentBusinessId;
@@ -100,6 +103,17 @@ export default function Purchases() {
     setInvoiceItems(invoiceItems.filter(item => item.productId !== productId));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBillImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreatePurchase = async () => {
     if (!user || !businessId || !selectedPartyId || invoiceItems.length === 0) {
       toast.error('Please select a supplier and add at least one item');
@@ -125,6 +139,7 @@ export default function Purchases() {
           paymentStatus: paidAmount >= totals.grandTotal ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid',
           paymentMode,
           notes,
+          billImageUrl,
           createdAt: serverTimestamp(),
         };
 
@@ -175,29 +190,57 @@ export default function Purchases() {
     setInvoiceItems([]);
     setPaidAmount(0);
     setNotes('');
+    setBillImageUrl(null);
   };
 
   const generatePDF = (invoice: Invoice) => {
     const doc = new jsPDF();
     const party = parties.find(p => p.id === invoice.partyId);
+    const template = currentBusiness?.invoiceTemplate || 'classic';
     
+    // Theme Colors
+    const colors = {
+      classic: [79, 70, 229], // Indigo
+      modern: [16, 185, 129], // Emerald
+      compact: [107, 114, 128], // Gray
+      professional: [30, 41, 59] // Slate
+    };
+    const themeColor = colors[template] || colors.classic;
+
     // Header
-    doc.setFontSize(20);
-    doc.text(currentBusiness?.name || 'Vyapar-X', 14, 22);
-    doc.setFontSize(10);
-    doc.text(currentBusiness?.address || '', 14, 30);
-    doc.text(`GST: ${currentBusiness?.gstNumber || 'N/A'}`, 14, 35);
+    if (template === 'modern') {
+      doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text(currentBusiness?.name || 'Vyapar-X', 14, 25);
+      doc.setFontSize(10);
+      doc.text(currentBusiness?.address || '', 14, 33);
+      doc.setTextColor(0, 0, 0);
+    } else {
+      doc.setFontSize(20);
+      doc.setTextColor(themeColor[0], themeColor[1], themeColor[2]);
+      doc.text(currentBusiness?.name || 'Vyapar-X', 14, 22);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text(currentBusiness?.address || '', 14, 30);
+      doc.text(`GST: ${currentBusiness?.gstNumber || 'N/A'}`, 14, 35);
+    }
     
     // Invoice Info
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.text('PURCHASE BILL', 140, 22);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(`Bill No: ${invoice.invoiceNumber}`, 140, 30);
     doc.text(`Date: ${new Date(invoice.date).toLocaleDateString()}`, 140, 35);
     
     // Supplier
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.text('Supplier:', 14, 55);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(party?.name || 'Unknown Supplier', 14, 62);
     doc.text(party?.address || '', 14, 67);
@@ -216,8 +259,8 @@ export default function Purchases() {
       startY: 85,
       head: [['Item', 'Qty', 'Cost', 'GST', 'Total']],
       body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229] }
+      theme: template === 'compact' ? 'plain' : 'grid',
+      headStyles: { fillColor: themeColor }
     });
     
     // Totals
@@ -359,6 +402,42 @@ export default function Purchases() {
                         onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                         className="font-bold text-success"
                       />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-text-muted">Bill Receipt (Photo/Browse)</label>
+                    <div className="flex items-center gap-4">
+                      <div 
+                        className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-border-main rounded-lg p-4 hover:bg-slate-50 cursor-pointer transition-all relative overflow-hidden"
+                        onClick={() => document.getElementById('bill-upload')?.click()}
+                      >
+                        {billImageUrl ? (
+                          <img src={billImageUrl} alt="Bill Preview" className="max-h-32 rounded shadow-sm" />
+                        ) : (
+                          <>
+                            <Camera className="w-6 h-6 text-text-muted mb-1" />
+                            <span className="text-[10px] text-text-muted font-bold uppercase">Click to upload bill</span>
+                          </>
+                        )}
+                        <input 
+                          id="bill-upload" 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleFileChange} 
+                        />
+                      </div>
+                      {billImageUrl && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon-sm" 
+                          className="text-danger"
+                          onClick={() => setBillImageUrl(null)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
