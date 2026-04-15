@@ -1,0 +1,149 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User business profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "businessName": { "type": "string" },
+        "gstNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "currency": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "businessName", "currency", "createdAt"]
+    },
+    "Party": {
+      "title": "Party",
+      "description": "Customer or Supplier management",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "gstNumber": { "type": "string" },
+        "type": { "type": "string", "enum": ["customer", "supplier"] },
+        "balance": { "type": "number", "description": "Positive for receivable, negative for payable" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "phone", "type", "balance", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Inventory product",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "hsnCode": { "type": "string" },
+        "gstRate": { "type": "number" },
+        "purchasePrice": { "type": "number" },
+        "salePrice": { "type": "number" },
+        "stockQuantity": { "type": "number" },
+        "lowStockAlert": { "type": "number" },
+        "category": { "type": "string" },
+        "unit": { "type": "string", "enum": ["pcs", "kg", "mtr", "box"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "salePrice", "stockQuantity", "createdAt"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Sales or Purchase Invoice",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "partyId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "type": { "type": "string", "enum": ["sale", "purchase", "estimate", "proforma"] },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" },
+              "gstRate": { "type": "number" },
+              "discount": { "type": "number" },
+              "total": { "type": "number" }
+            }
+          }
+        },
+        "subTotal": { "type": "number" },
+        "taxTotal": { "type": "number" },
+        "discountTotal": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["paid", "partial", "unpaid"] },
+        "paymentMode": { "type": "string", "enum": ["cash", "bank", "upi"] },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "partyId", "invoiceNumber", "date", "type", "grandTotal", "createdAt"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Business expenses",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "paymentMode": { "type": "string", "enum": ["cash", "bank", "upi"] },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "category", "amount", "date", "createdAt"]
+    },
+    "BankAccount": {
+      "title": "BankAccount",
+      "description": "Bank account management",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "bankName": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "ifscCode": { "type": "string" },
+        "balance": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "bankName", "balance", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile settings"
+    },
+    "/parties/{partyId}": {
+      "schema": "Party",
+      "description": "Customer and Supplier data"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Inventory products"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Sales and Purchase invoices"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expense tracking"
+    },
+    "/bank_accounts/{accountId}": {
+      "schema": "BankAccount",
+      "description": "Bank accounts"
+    }
+  }
+}

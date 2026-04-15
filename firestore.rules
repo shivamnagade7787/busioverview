@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isNewDocOwner() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.userId;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.email == "shivamnagade@gmail.com";
+    }
+
+    // ===============================================================
+    // Validation Functions
+    // ===============================================================
+
+    function isValidUserProfile(data) {
+      return data.uid == request.auth.uid &&
+             (data.businesses is list || (data.businessName is string && data.businessName.size() > 0));
+    }
+
+    function isValidParty(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string &&
+             data.type in ['customer', 'supplier'] &&
+             data.balance is number;
+    }
+
+    function isValidProduct(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string &&
+             data.salePrice is number &&
+             data.stockQuantity is number;
+    }
+
+    function isValidInvoice(data) {
+      return data.userId == request.auth.uid &&
+             data.partyId is string &&
+             data.type in ['sale', 'purchase', 'estimate', 'proforma'] &&
+             data.grandTotal is number;
+    }
+
+    function isValidExpense(data) {
+      return data.userId == request.auth.uid &&
+             data.category is string &&
+             data.amount is number;
+    }
+
+    function isValidBankAccount(data) {
+      return data.userId == request.auth.uid &&
+             data.bankName is string &&
+             data.balance is number;
+    }
+
+    function isValidLedger(data) {
+      return data.userId == request.auth.uid &&
+             data.partyId is string &&
+             data.type in ['credit', 'debit'] &&
+             data.amount is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow get, list: if isOwner(userId) || isSuperAdmin();
+      allow create, update: if (isOwner(userId) || isSuperAdmin()) && isValidUserProfile(request.resource.data);
+    }
+
+    match /parties/{partyId} {
+      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
+      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidParty(request.resource.data));
+      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidParty(request.resource.data));
+      allow delete: if isSuperAdmin() || isDocOwner();
+    }
+
+    match /products/{productId} {
+      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
+      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidProduct(request.resource.data));
+      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidProduct(request.resource.data));
+      allow delete: if isSuperAdmin() || isDocOwner();
+    }
+
+    match /invoices/{invoiceId} {
+      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
+      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidInvoice(request.resource.data));
+      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidInvoice(request.resource.data));
+      allow delete: if isSuperAdmin() || isDocOwner();
+    }
+
+    match /expenses/{expenseId} {
+      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
+      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidExpense(request.resource.data));
+      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidExpense(request.resource.data));
+      allow delete: if isSuperAdmin() || isDocOwner();
+    }
+
+    match /bank_accounts/{accountId} {
+      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
+      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidBankAccount(request.resource.data));
+      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidBankAccount(request.resource.data));
+      allow delete: if isSuperAdmin() || isDocOwner();
+    }
+
+    match /ledger/{entryId} {
+      allow get: if isSuperAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
+      allow list: if isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isNewDocOwner() && isValidLedger(request.resource.data));
+      allow update: if isSuperAdmin() || (isDocOwner() && isNewDocOwner() && isValidLedger(request.resource.data));
+      allow delete: if isSuperAdmin() || isDocOwner();
+    }
+  }
+}
