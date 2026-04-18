@@ -50,13 +50,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (user) {
-      const unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-        if (doc.exists()) {
-          const data = doc.data() as UserProfile;
+      const unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as UserProfile;
+          const businessIds = data.businessIds || (data.businesses || []).map(b => b.id);
+          
+          if (!data.businessIds && businessIds.length > 0) {
+            updateDoc(doc(db, 'users', user.uid), { businessIds });
+          }
+
           setProfile({
             ...data,
             businesses: data.businesses || [],
-            businessIds: data.businessIds || (data.businesses || []).map(b => b.id)
+            businessIds
           });
         } else {
           setProfile(null);

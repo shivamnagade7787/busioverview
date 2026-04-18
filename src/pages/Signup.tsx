@@ -43,6 +43,7 @@ export default function Signup() {
         email: user.email,
         currentBusinessId: businessId,
         businesses: [initialBusiness],
+        businessIds: [businessId],
         darkMode: false,
         createdAt: new Date().toISOString()
       });

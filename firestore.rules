@@ -26,7 +26,15 @@ service cloud.firestore {
 
     function hasBusinessAccess(bizId) {
       return isAuthenticated() && 
-        (isSuperAdmin() || bizId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessIds);
+        (isSuperAdmin() || (bizId != null && bizId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('businessIds', [])));
+    }
+
+    function canAccessDoc() {
+      return isSuperAdmin() || isDocOwner() || hasBusinessAccess(resource.data.get('businessId', null));
+    }
+
+    function canCreateDoc(data) {
+      return isSuperAdmin() || (isNewDocOwner() && hasBusinessAccess(data.get('businessId', null)));
     }
 
     // ===============================================================
@@ -42,41 +50,35 @@ service cloud.firestore {
     }
 
     function isValidParty(data) {
-      return hasBusinessAccess(data.businessId) &&
-             data.name is string &&
+      return data.name is string &&
              data.type in ['customer', 'supplier'] &&
              data.balance is number;
     }
 
     function isValidProduct(data) {
-      return hasBusinessAccess(data.businessId) &&
-             data.name is string &&
+      return data.name is string &&
              data.salePrice is number &&
              data.stockQuantity is number;
     }
 
     function isValidInvoice(data) {
-      return hasBusinessAccess(data.businessId) &&
-             data.partyId is string &&
+      return data.partyId is string &&
              data.type in ['sale', 'purchase', 'estimate', 'proforma'] &&
              data.grandTotal is number;
     }
 
     function isValidExpense(data) {
-      return hasBusinessAccess(data.businessId) &&
-             data.category is string &&
+      return data.category is string &&
              data.amount is number;
     }
 
     function isValidBankAccount(data) {
-      return hasBusinessAccess(data.businessId) &&
-             data.bankName is string &&
+      return data.bankName is string &&
              data.balance is number;
     }
 
     function isValidLedger(data) {
-      return hasBusinessAccess(data.businessId) &&
-             data.partyId is string &&
+      return data.partyId is string &&
              data.type in ['credit', 'debit'] &&
              data.amount is number;
     }
@@ -98,45 +100,45 @@ service cloud.firestore {
     }
 
     match /parties/{partyId} {
-      allow get, list: if hasBusinessAccess(resource.data.businessId);
-      allow create: if isValidParty(request.resource.data);
-      allow update: if hasBusinessAccess(resource.data.businessId) && isValidParty(request.resource.data);
-      allow delete: if hasBusinessAccess(resource.data.businessId);
+      allow get, list: if canAccessDoc();
+      allow create: if canCreateDoc(request.resource.data) && isValidParty(request.resource.data);
+      allow update: if canAccessDoc() && isValidParty(request.resource.data);
+      allow delete: if canAccessDoc();
     }
 
     match /products/{productId} {
-      allow get, list: if hasBusinessAccess(resource.data.businessId);
-      allow create: if isValidProduct(request.resource.data);
-      allow update: if hasBusinessAccess(resource.data.businessId) && isValidProduct(request.resource.data);
-      allow delete: if hasBusinessAccess(resource.data.businessId);
+      allow get, list: if canAccessDoc();
+      allow create: if canCreateDoc(request.resource.data) && isValidProduct(request.resource.data);
+      allow update: if canAccessDoc() && isValidProduct(request.resource.data);
+      allow delete: if canAccessDoc();
     }
 
     match /invoices/{invoiceId} {
-      allow get, list: if hasBusinessAccess(resource.data.businessId);
-      allow create: if isValidInvoice(request.resource.data);
-      allow update: if hasBusinessAccess(resource.data.businessId) && isValidInvoice(request.resource.data);
-      allow delete: if hasBusinessAccess(resource.data.businessId);
+      allow get, list: if canAccessDoc();
+      allow create: if canCreateDoc(request.resource.data) && isValidInvoice(request.resource.data);
+      allow update: if canAccessDoc() && isValidInvoice(request.resource.data);
+      allow delete: if canAccessDoc();
     }
 
     match /expenses/{expenseId} {
-      allow get, list: if hasBusinessAccess(resource.data.businessId);
-      allow create: if isValidExpense(request.resource.data);
-      allow update: if hasBusinessAccess(resource.data.businessId) && isValidExpense(request.resource.data);
-      allow delete: if hasBusinessAccess(resource.data.businessId);
+      allow get, list: if canAccessDoc();
+      allow create: if canCreateDoc(request.resource.data) && isValidExpense(request.resource.data);
+      allow update: if canAccessDoc() && isValidExpense(request.resource.data);
+      allow delete: if canAccessDoc();
     }
 
     match /bank_accounts/{accountId} {
-      allow get, list: if hasBusinessAccess(resource.data.businessId);
-      allow create: if isValidBankAccount(request.resource.data);
-      allow update: if hasBusinessAccess(resource.data.businessId) && isValidBankAccount(request.resource.data);
-      allow delete: if hasBusinessAccess(resource.data.businessId);
+      allow get, list: if canAccessDoc();
+      allow create: if canCreateDoc(request.resource.data) && isValidBankAccount(request.resource.data);
+      allow update: if canAccessDoc() && isValidBankAccount(request.resource.data);
+      allow delete: if canAccessDoc();
     }
 
     match /ledger/{entryId} {
-      allow get, list: if hasBusinessAccess(resource.data.businessId);
-      allow create: if isValidLedger(request.resource.data);
-      allow update: if hasBusinessAccess(resource.data.businessId) && isValidLedger(request.resource.data);
-      allow delete: if hasBusinessAccess(resource.data.businessId);
+      allow get, list: if canAccessDoc();
+      allow create: if canCreateDoc(request.resource.data) && isValidLedger(request.resource.data);
+      allow update: if canAccessDoc() && isValidLedger(request.resource.data);
+      allow delete: if canAccessDoc();
     }
   }
 }

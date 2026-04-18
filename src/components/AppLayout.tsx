@@ -207,10 +207,10 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     )}>
       <div className={cn("p-4 flex items-center", !isMobile && !isSidebarExpanded ? "justify-center" : "justify-between")}>
         {(!isMobile && !isSidebarExpanded) ? (
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">V</div>
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">B</div>
         ) : (
           <h1 className="text-xl font-extrabold tracking-tight text-primary truncate">
-            {currentBusiness?.name || 'VYAPAAR-X'}
+            {currentBusiness?.name || 'Business Buddy'}
           </h1>
         )}
       </div>
