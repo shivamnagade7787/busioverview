@@ -23,8 +23,10 @@ import {
   Edit2,
   Download,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CheckCircle2
 } from 'lucide-react';
+import CameraCapture from '@/src/components/CameraCapture';
 import { 
   Dialog, 
   DialogContent, 
@@ -57,6 +59,7 @@ export default function Purchases() {
   const { invoices, parties, products, loading } = useBusiness();
   const { user, profile, currentBusiness } = useAuth();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
   // New Purchase State
@@ -407,17 +410,43 @@ export default function Purchases() {
 
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase text-text-muted">Bill Receipt (Photo/Browse)</label>
+                    <div className="flex gap-2 mb-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => setIsCameraOpen(true)}
+                      >
+                        <Camera className="w-4 h-4" /> Take Photo
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => document.getElementById('bill-upload')?.click()}
+                      >
+                        <ImageIcon className="w-4 h-4" /> Browse
+                      </Button>
+                    </div>
+
                     <div className="flex items-center gap-4">
                       <div 
                         className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-border-main rounded-lg p-4 hover:bg-slate-50 cursor-pointer transition-all relative overflow-hidden"
-                        onClick={() => document.getElementById('bill-upload')?.click()}
+                        onClick={() => !billImageUrl && setIsCameraOpen(true)}
                       >
                         {billImageUrl ? (
-                          <img src={billImageUrl} alt="Bill Preview" className="max-h-32 rounded shadow-sm" />
+                          <div className="relative group">
+                            <img src={billImageUrl} alt="Bill Preview" className="max-h-32 rounded shadow-sm" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+                              <CheckCircle2 className="text-white w-8 h-8" />
+                            </div>
+                          </div>
                         ) : (
                           <>
                             <Camera className="w-6 h-6 text-text-muted mb-1" />
-                            <span className="text-[10px] text-text-muted font-bold uppercase">Click to upload bill</span>
+                            <span className="text-[10px] text-text-muted font-bold uppercase text-center">Capture or Upload Bill</span>
                           </>
                         )}
                         <input 
@@ -440,6 +469,12 @@ export default function Purchases() {
                       )}
                     </div>
                   </div>
+
+                  <CameraCapture 
+                    isOpen={isCameraOpen}
+                    onClose={() => setIsCameraOpen(false)}
+                    onCapture={(img) => setBillImageUrl(img)}
+                  />
 
                   <div className="bg-slate-50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between text-xs">

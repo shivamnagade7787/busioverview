@@ -58,6 +58,7 @@ export interface Product {
   lowStockAlert?: number;
   category?: string;
   unit?: string;
+  makingDate?: string;
   reminderEnabled?: boolean;
   reminderDate?: string;
   createdAt: string;

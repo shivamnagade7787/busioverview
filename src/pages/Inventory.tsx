@@ -68,6 +68,7 @@ export default function Inventory() {
     lowStockAlert: 5,
     category: '',
     unit: 'pcs',
+    makingDate: '',
     reminderEnabled: false,
     reminderDate: ''
   });
@@ -108,6 +109,7 @@ export default function Inventory() {
         lowStockAlert: 5,
         category: '',
         unit: 'pcs',
+        makingDate: '',
         reminderEnabled: false,
         reminderDate: ''
       });
@@ -267,6 +269,17 @@ export default function Inventory() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-text-muted">Making Date (MFG)</label>
+                    <Input
+                      type="date"
+                      value={newProduct.makingDate}
+                      onChange={(e) => setNewProduct({ ...newProduct, makingDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="border-t pt-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-bold">Enable Reminder</label>
@@ -365,6 +378,9 @@ export default function Inventory() {
                       )}>
                         {product.stockQuantity} {product.unit}
                       </span>
+                      {product.makingDate && (
+                        <span className="text-[10px] text-text-muted font-bold uppercase">MFG: {product.makingDate}</span>
+                      )}
                       {product.stockQuantity <= (product.lowStockAlert || 0) && (
                         <span className="text-[10px] text-danger font-bold uppercase">Low Stock</span>
                       )}
@@ -500,6 +516,17 @@ export default function Inventory() {
                     type="number"
                     value={newProduct.lowStockAlert}
                     onChange={(e) => setNewProduct({ ...newProduct, lowStockAlert: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-text-muted">Making Date (MFG)</label>
+                  <Input
+                    type="date"
+                    value={newProduct.makingDate}
+                    onChange={(e) => setNewProduct({ ...newProduct, makingDate: e.target.value })}
                   />
                 </div>
               </div>

@@ -1,6 +1,6 @@
 {
   "name": "Business Buddy",
   "description": "A full-stack business management application with inventory, transactions, and customer tracking using Firebase.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": []
 }

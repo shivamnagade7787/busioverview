@@ -187,17 +187,23 @@ export default function Parties() {
       ? `upi://pay?pa=${currentBusiness.upiId}&pn=${encodeURIComponent(currentBusiness.name)}&cu=INR&am=${Math.abs(party.balance)}`
       : '';
     
+    const qrCodeLink = upiLink 
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`
+      : '';
+    
     const language = currentBusiness?.language || 'en';
     
     const messages = {
       en: {
         reminder: `Hello ${party.name}, this is a reminder regarding your outstanding balance of ${currency}${Math.abs(party.balance)} with ${currentBusiness?.name}.`,
         upi: `You can pay using this UPI link: ${upiLink}\nOr pay to UPI ID: ${currentBusiness?.upiId}`,
+        qr: `Scan this QR code to pay: ${qrCodeLink}`,
         footer: `Please settle it at your earliest convenience. Thank you!`
       },
       mr: {
         reminder: `नमस्कार ${party.name}, ${currentBusiness?.name} कडील तुमची ${currency}${Math.abs(party.balance)} ची थकबाकी भरण्याबाबत ही आठवण आहे.`,
         upi: `तुम्ही या UPI लिंकद्वारे पैसे भरू शकता: ${upiLink}\nकिंवा या UPI आयडीवर पाठवा: ${currentBusiness?.upiId}`,
+        qr: `पैसे भरण्यासाठी हा QR कोड स्कॅन करा: ${qrCodeLink}`,
         footer: `कृपया लवकरात लवकर थकबाकी भरा. धन्यवाद!`
       }
     };
@@ -207,6 +213,9 @@ export default function Parties() {
     
     if (upiLink && party.balance > 0) {
       message += `\n\n${m.upi}`;
+      if (qrCodeLink) {
+        message += `\n\n${m.qr}`;
+      }
     }
     
     message += `\n\n${m.footer}`;
