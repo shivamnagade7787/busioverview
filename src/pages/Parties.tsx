@@ -23,8 +23,11 @@ import {
   Edit2,
   History,
   CreditCard,
-  Wallet
+  Wallet,
+  QrCode,
+  Share2
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { 
   Dialog, 
   DialogContent, 
@@ -61,6 +64,7 @@ export default function Parties() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  const [isQROpen, setIsQROpen] = useState(false);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [partyType, setPartyType] = useState<PartyType>('customer');
   
@@ -208,7 +212,7 @@ export default function Parties() {
       }
     };
 
-    const m = messages[language];
+    const m = messages[language as keyof typeof messages] || messages.en;
     let message = m.reminder;
     
     if (upiLink && party.balance > 0) {
@@ -220,7 +224,80 @@ export default function Parties() {
     
     message += `\n\n${m.footer}`;
     
-    window.open(`https://wa.me/${party.phone}?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/${party.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const shareQR = async (party: Party) => {
+    if (!currentBusiness?.upiId) {
+      toast.error('Please setup UPI ID in Business Settings first');
+      return;
+    }
+
+    try {
+      // Find the SVG element in the hidden div
+      const svg = document.getElementById('qr-source');
+      if (!svg) throw new Error('QR Source not found');
+
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = async () => {
+        canvas.width = img.width + 40;
+        canvas.height = img.height + 150;
+        if (ctx) {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw text header
+          ctx.fillStyle = 'black';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(currentBusiness?.name || 'Business Buddy', canvas.width / 2, 40);
+          
+          ctx.font = 'bold 36px sans-serif';
+          ctx.fillStyle = '#2563eb'; // Primary color
+          ctx.fillText(`${currency}${Math.abs(party.balance).toLocaleString()}`, canvas.width / 2, 90);
+          
+          ctx.font = '16px sans-serif';
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(`Request from ${party.name}`, canvas.width / 2, 120);
+
+          // Draw the QR code
+          ctx.drawImage(img, 20, 140);
+
+          // Draw footer
+          ctx.font = 'bold 14px monospace';
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(`UPI ID: ${currentBusiness?.upiId}`, canvas.width / 2, canvas.height - 20);
+
+          canvas.toBlob(async (blob) => {
+            if (!blob) return;
+            const file = new File([blob], `payment_qr_${party.name}.png`, { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: `Payment QR for ${party.name}`,
+                text: `Hello ${party.name}, please settle your balance of ${currency}${Math.abs(party.balance)}.`
+              });
+            } else {
+              // If sharing files is not supported, at least offer to download or send text
+              sendWhatsApp(party);
+            }
+          }, 'image/png');
+        }
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    } catch (error) {
+      console.error('Error sharing QR:', error);
+      sendWhatsApp(party);
+    }
   };
 
   if (loading) {
@@ -436,8 +513,16 @@ export default function Parties() {
                             <Edit2 className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => sendWhatsApp(party)} className="text-success">
-                            <MessageSquare className="mr-2 h-4 w-4" /> WhatsApp
+                            <MessageSquare className="mr-2 h-4 w-4" /> WhatsApp Message
                           </DropdownMenuItem>
+                          {party.balance > 0 && currentBusiness?.upiId && (
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedParty(party);
+                              setIsQROpen(true);
+                            }} className="text-primary">
+                              <QrCode className="mr-2 h-4 w-4" /> Payment QR
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleDeleteParty(party.id)} className="text-danger">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                           </DropdownMenuItem>
@@ -499,6 +584,84 @@ export default function Parties() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Payment QR Dialog */}
+      <Dialog open={isQROpen} onOpenChange={setIsQROpen}>
+        <DialogContent className="sm:max-w-[400px] text-center">
+          <DialogHeader>
+            <DialogTitle className="text-center">Collect Payment</DialogTitle>
+          </DialogHeader>
+          
+          {selectedParty && (
+            <div className="flex flex-col items-center gap-6 py-6">
+              <div className="text-center">
+                <div className="text-sm font-bold text-text-muted uppercase mb-1">Receivable Amount</div>
+                <div className="text-3xl font-extrabold text-primary">{currency}{Math.abs(selectedParty.balance).toLocaleString()}</div>
+                <div className="text-xs text-text-muted mt-1">From: {selectedParty.name}</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border-4 border-slate-100 shadow-sm relative group">
+                <QRCodeSVG 
+                  value={`upi://pay?pa=${currentBusiness?.upiId}&pn=${encodeURIComponent(currentBusiness?.name || '')}&cu=INR&am=${Math.abs(selectedParty.balance)}`}
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+                
+                {/* Hidden canvas for sharing */}
+                <div className="hidden">
+                  <div id="share-content" className="p-8 bg-white text-center" style={{ width: '400px' }}>
+                    <div className="text-xl font-bold mb-4">{currentBusiness?.name}</div>
+                    <div className="text-3xl font-extrabold text-primary mb-2">{currency}{Math.abs(selectedParty.balance).toLocaleString()}</div>
+                    <div className="text-sm text-text-muted mb-6">Payment request for {selectedParty.name}</div>
+                    <div className="flex justify-center mb-6">
+                      {/* We'll use a hidden actual canvas for html2canvas or similar if needed, but for now let's use a simpler approach */}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-sm font-mono bg-slate-50 px-3 py-1.5 rounded border border-border-main text-text-muted">
+                UPI ID: {currentBusiness?.upiId}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 w-full mt-4">
+                <Button 
+                  className="w-full gap-2 bg-success hover:bg-success/90" 
+                  onClick={() => {
+                    shareQR(selectedParty);
+                    setIsQROpen(false);
+                  }}
+                >
+                  <Share2 className="w-4 h-4" /> Share on WhatsApp
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setIsQROpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Hidden constant QR for canvas generation */}
+      <div className="fixed -left-[9999px] -top-[9999px]">
+        {selectedParty && (
+          <div id="qr-to-canvas" style={{ padding: '20px', background: 'white' }}>
+             <QRCodeSVG 
+                id="qr-source"
+                value={`upi://pay?pa=${currentBusiness?.upiId}&pn=${encodeURIComponent(currentBusiness?.name || '')}&cu=INR&am=${Math.abs(selectedParty.balance)}`}
+                size={400}
+                level="H"
+                includeMargin={true}
+              />
+          </div>
+        )}
+      </div>
 
       {/* Ledger Dialog */}
       <Dialog open={isLedgerOpen} onOpenChange={setIsLedgerOpen}>
