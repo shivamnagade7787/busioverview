@@ -25,7 +25,8 @@ import {
   CreditCard,
   Wallet,
   QrCode,
-  Share2
+  Share2,
+  Download
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
@@ -191,8 +192,9 @@ export default function Parties() {
       ? `upi://pay?pa=${currentBusiness.upiId}&pn=${encodeURIComponent(currentBusiness.name)}&cu=INR&am=${Math.abs(party.balance)}`
       : '';
     
+    // Use a direct image URL service that WhatsApp might preview better
     const qrCodeLink = upiLink 
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLink)}`
       : '';
     
     const language = currentBusiness?.language || 'en';
@@ -201,13 +203,13 @@ export default function Parties() {
       en: {
         reminder: `Hello ${party.name}, this is a reminder regarding your outstanding balance of ${currency}${Math.abs(party.balance)} with ${currentBusiness?.name}.`,
         upi: `You can pay using this UPI link: ${upiLink}\nOr pay to UPI ID: ${currentBusiness?.upiId}`,
-        qr: `Scan this QR code to pay: ${qrCodeLink}`,
+        qr: `View/Scan Payment QR Code: ${qrCodeLink}`,
         footer: `Please settle it at your earliest convenience. Thank you!`
       },
       mr: {
         reminder: `नमस्कार ${party.name}, ${currentBusiness?.name} कडील तुमची ${currency}${Math.abs(party.balance)} ची थकबाकी भरण्याबाबत ही आठवण आहे.`,
         upi: `तुम्ही या UPI लिंकद्वारे पैसे भरू शकता: ${upiLink}\nकिंवा या UPI आयडीवर पाठवा: ${currentBusiness?.upiId}`,
-        qr: `पैसे भरण्यासाठी हा QR कोड स्कॅन करा: ${qrCodeLink}`,
+        qr: `पेमेंट QR कोड पहा/स्कॅन करा: ${qrCodeLink}`,
         footer: `कृपया लवकरात लवकर थकबाकी भरा. धन्यवाद!`
       }
     };
@@ -224,17 +226,17 @@ export default function Parties() {
     
     message += `\n\n${m.footer}`;
     
-    window.open(`https://wa.me/${party.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+    // Format phone number: remove all non-digits, and if 10 digits, add 91 prefix for India
+    let cleanPhone = party.phone.replace(/\D/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+    
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  const shareQR = async (party: Party) => {
-    if (!currentBusiness?.upiId) {
-      toast.error('Please setup UPI ID in Business Settings first');
-      return;
-    }
-
+  const downloadQR = (party: Party) => {
     try {
-      // Find the SVG element in the hidden div
       const svg = document.getElementById('qr-source');
       if (!svg) throw new Error('QR Source not found');
 
@@ -246,58 +248,61 @@ export default function Parties() {
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
 
-      img.onload = async () => {
-        canvas.width = img.width + 40;
-        canvas.height = img.height + 150;
+      img.onload = () => {
+        canvas.width = 440;
+        canvas.height = 600;
         if (ctx) {
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           
-          // Draw text header
-          ctx.fillStyle = 'black';
+          ctx.fillStyle = '#2563eb';
+          ctx.fillRect(0, 0, canvas.width, 100);
+
+          ctx.fillStyle = 'white';
           ctx.font = 'bold 24px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(currentBusiness?.name || 'Business Buddy', canvas.width / 2, 40);
-          
-          ctx.font = 'bold 36px sans-serif';
-          ctx.fillStyle = '#2563eb'; // Primary color
-          ctx.fillText(`${currency}${Math.abs(party.balance).toLocaleString()}`, canvas.width / 2, 90);
+          ctx.fillText(currentBusiness?.name || 'Business Buddy', canvas.width / 2, 45);
           
           ctx.font = '16px sans-serif';
+          ctx.fillText('Payment Request', canvas.width / 2, 75);
+
+          ctx.fillStyle = 'black';
+          ctx.font = 'bold 42px sans-serif';
+          ctx.fillText(`${currency}${Math.abs(party.balance).toLocaleString()}`, canvas.width / 2, 180);
+          
+          ctx.font = '18px sans-serif';
           ctx.fillStyle = '#64748b';
-          ctx.fillText(`Request from ${party.name}`, canvas.width / 2, 120);
+          ctx.fillText(`Payable by: ${party.name}`, canvas.width / 2, 215);
 
-          // Draw the QR code
-          ctx.drawImage(img, 20, 140);
+          ctx.drawImage(img, 20, 240, 400, 400);
 
-          // Draw footer
-          ctx.font = 'bold 14px monospace';
-          ctx.fillStyle = '#64748b';
-          ctx.fillText(`UPI ID: ${currentBusiness?.upiId}`, canvas.width / 2, canvas.height - 20);
+          ctx.font = 'bold 16px monospace';
+          ctx.fillStyle = '#1e293b';
+          ctx.fillText(`UPI ID: ${currentBusiness?.upiId}`, canvas.width / 2, canvas.height - 40);
 
-          canvas.toBlob(async (blob) => {
-            if (!blob) return;
-            const file = new File([blob], `payment_qr_${party.name}.png`, { type: 'image/png' });
-            
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: `Payment QR for ${party.name}`,
-                text: `Hello ${party.name}, please settle your balance of ${currency}${Math.abs(party.balance)}.`
-              });
-            } else {
-              // If sharing files is not supported, at least offer to download or send text
-              sendWhatsApp(party);
-            }
-          }, 'image/png');
+          const link = document.createElement('a');
+          link.download = `payment_qr_${party.name}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
         }
         URL.revokeObjectURL(url);
       };
       img.src = url;
+      toast.success('QR Code downloaded successfully');
     } catch (error) {
-      console.error('Error sharing QR:', error);
-      sendWhatsApp(party);
+      console.error('Error downloading QR:', error);
+      toast.error('Failed to download QR code');
     }
+  };
+
+  const shareQR = async (party: Party) => {
+    if (!currentBusiness?.upiId) {
+      toast.error('Please setup UPI ID in Business Settings first');
+      return;
+    }
+
+    // First try the text message with the QR link, as it's most reliable
+    sendWhatsApp(party);
   };
 
   if (loading) {
@@ -633,7 +638,16 @@ export default function Parties() {
                     setIsQROpen(false);
                   }}
                 >
-                  <Share2 className="w-4 h-4" /> Share on WhatsApp
+                  <Share2 className="w-4 h-4" /> Send on WhatsApp
+                </Button>
+                <Button 
+                  variant="secondary"
+                  className="w-full gap-2" 
+                  onClick={() => {
+                    downloadQR(selectedParty);
+                  }}
+                >
+                  <Download className="w-4 h-4" /> Download QR Image
                 </Button>
                 <Button 
                   variant="outline" 
