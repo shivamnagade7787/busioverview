@@ -125,6 +125,18 @@ export default function Purchases() {
 
     try {
       await runTransaction(db, async (transaction) => {
+        // 1. PERFORM ALL READS FIRST
+        const partyRef = doc(db, 'parties', selectedPartyId);
+        const partyDoc = await transaction.get(partyRef);
+        
+        const productDocs = [];
+        for (const item of invoiceItems) {
+          const productRef = doc(db, 'products', item.productId);
+          const pDoc = await transaction.get(productRef);
+          productDocs.push({ ref: productRef, doc: pDoc, item });
+        }
+
+        // 2. CALCULATE AND PREPARE DATA
         const invoiceNumber = `PUR-${Date.now().toString().slice(-6)}`;
         const invoiceData = {
           userId: user.uid,
@@ -146,26 +158,24 @@ export default function Purchases() {
           createdAt: serverTimestamp(),
         };
 
-        // 1. Create Purchase Record
+        // 3. PERFORM ALL WRITES
+        
+        // Create Purchase Record
         const invoiceRef = doc(collection(db, 'invoices'));
         transaction.set(invoiceRef, invoiceData);
 
-        // 2. Update Party Balance (Supplier balance is negative for payable)
-        const partyRef = doc(db, 'parties', selectedPartyId);
-        const partyDoc = await transaction.get(partyRef);
+        // Update Party Balance (Supplier balance is negative for payable)
         if (partyDoc.exists()) {
           const currentBalance = partyDoc.data().balance || 0;
           const balanceChange = totals.grandTotal - paidAmount;
           transaction.update(partyRef, { balance: currentBalance - balanceChange });
         }
 
-        // 3. Update Product Stock (Increase)
-        for (const item of invoiceItems) {
-          const productRef = doc(db, 'products', item.productId);
-          const productDoc = await transaction.get(productRef);
-          if (productDoc.exists()) {
-            const currentStock = productDoc.data().stockQuantity || 0;
-            transaction.update(productRef, { stockQuantity: currentStock + item.quantity });
+        // Update Product Stock (Increase)
+        for (const { ref, doc: pDoc, item } of productDocs) {
+          if (pDoc.exists()) {
+            const currentStock = pDoc.data().stockQuantity || 0;
+            transaction.update(ref, { stockQuantity: currentStock + item.quantity });
           }
         }
       });
@@ -288,11 +298,11 @@ export default function Purchases() {
         </div>
         
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger render={
+          <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" /> Record Purchase
             </Button>
-          } />
+          </DialogTrigger>
           <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>New Purchase Bill</DialogTitle>
@@ -547,11 +557,11 @@ export default function Purchases() {
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
-                      <DropdownMenuTrigger render={
+                      <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon-sm">
                           <MoreVertical className="w-4 h-4" />
                         </Button>
-                      } />
+                      </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => generatePDF(inv)}>
                           <Download className="mr-2 h-4 w-4" /> Download PDF
