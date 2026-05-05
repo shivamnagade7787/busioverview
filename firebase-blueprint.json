@@ -86,6 +86,7 @@
         "paymentStatus": { "type": "string", "enum": ["paid", "partial", "unpaid"] },
         "paymentMode": { "type": "string", "enum": ["cash", "bank", "upi"] },
         "notes": { "type": "string" },
+        "billImageUrl": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "partyId", "invoiceNumber", "date", "type", "grandTotal", "createdAt"]

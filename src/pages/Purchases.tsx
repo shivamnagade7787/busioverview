@@ -24,7 +24,9 @@ import {
   Download,
   Camera,
   Image as ImageIcon,
-  CheckCircle2
+  Eye,
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import CameraCapture from '@/src/components/CameraCapture';
 import { 
@@ -60,6 +62,9 @@ export default function Purchases() {
   const { user, profile, currentBusiness } = useAuth();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isViewBillOpen, setIsViewBillOpen] = useState(false);
+  const [isAddBillDialogOpen, setIsAddBillDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   // New Purchase State
@@ -70,6 +75,7 @@ export default function Purchases() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState('');
   const [billImageUrl, setBillImageUrl] = useState<string | null>(null);
+  const [tempBillUrl, setTempBillUrl] = useState<string | null>(null);
 
   const currency = profile?.currency || '₹';
   const businessId = profile?.currentBusinessId;
@@ -206,6 +212,26 @@ export default function Purchases() {
     setBillImageUrl(null);
   };
 
+  const handleUpdateBill = async () => {
+    if (!selectedInvoice || !tempBillUrl) return;
+
+    try {
+      const invoiceRef = doc(db, 'invoices', selectedInvoice.id);
+      await transactionUpdateBill(invoiceRef, tempBillUrl);
+      toast.success('Bill updated successfully');
+      setIsAddBillDialogOpen(false);
+      setTempBillUrl(null);
+    } catch (error) {
+      toast.error('Failed to update bill');
+    }
+  };
+
+  const transactionUpdateBill = async (invoiceRef: any, url: string) => {
+    await runTransaction(db, async (transaction) => {
+      transaction.update(invoiceRef, { billImageUrl: url });
+    });
+  };
+
   const generatePDF = (invoice: Invoice) => {
     try {
       const doc = new jsPDF();
@@ -223,10 +249,11 @@ export default function Purchases() {
         professional: [30, 41, 59] // Slate
       };
       const themeColor = colors[template as keyof typeof colors] || colors.classic;
+      const pdfThemeColor = themeColor as [number, number, number];
 
       // Header
       if (template === 'modern') {
-        doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
+        doc.setFillColor(pdfThemeColor[0], pdfThemeColor[1], pdfThemeColor[2]);
         doc.rect(0, 0, 210, 40, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(24);
@@ -277,7 +304,7 @@ export default function Purchases() {
         head: [['Item', 'Qty', 'Cost', 'GST', 'Total']],
         body: tableData,
         theme: template === 'compact' ? 'plain' : 'grid',
-        headStyles: { fillColor: themeColor }
+        headStyles: { fillColor: pdfThemeColor }
       });
       
       // Totals
@@ -489,12 +516,6 @@ export default function Purchases() {
                     </div>
                   </div>
 
-                  <CameraCapture 
-                    isOpen={isCameraOpen}
-                    onClose={() => setIsCameraOpen(false)}
-                    onCapture={(img) => setBillImageUrl(img)}
-                  />
-
                   <div className="bg-slate-50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-text-muted">Sub Total</span>
@@ -578,6 +599,21 @@ export default function Purchases() {
                         <DropdownMenuItem onClick={() => handleDeletePurchase(inv)} className="text-danger">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedInvoice(inv);
+                          setTempBillUrl(inv.billImageUrl || null);
+                          setIsAddBillDialogOpen(true);
+                        }}>
+                          <Camera className="mr-2 h-4 w-4" /> {inv.billImageUrl ? 'Update Bill' : 'Add Bill'}
+                        </DropdownMenuItem>
+                        {inv.billImageUrl && (
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedInvoice(inv);
+                            setIsViewBillOpen(true);
+                          }}>
+                            <Eye className="mr-2 h-4 w-4" /> View Bill
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -587,6 +623,132 @@ export default function Purchases() {
           </Table>
         </div>
       </div>
+
+      {/* View Bill Dialog */}
+      <Dialog open={isViewBillOpen} onOpenChange={setIsViewBillOpen}>
+        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-white">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="flex justify-between items-center text-black">
+              <span>Purchase Bill - {selectedInvoice?.invoiceNumber}</span>
+              <Button variant="ghost" size="icon-sm" onClick={() => setIsViewBillOpen(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 flex items-center justify-center bg-slate-50 min-h-[400px]">
+            {selectedInvoice?.billImageUrl ? (
+              <img 
+                src={selectedInvoice.billImageUrl} 
+                alt="Purchase Bill" 
+                className="max-w-full max-h-[70vh] rounded shadow-lg object-contain"
+              />
+            ) : (
+              <div className="text-center p-12">
+                <ImageIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500">No bill image associated with this purchase.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-4 border-t bg-white">
+            <Button variant="outline" onClick={() => setIsViewBillOpen(false)}>Close</Button>
+            {selectedInvoice?.billImageUrl && (
+              <Button onClick={() => {
+                const link = document.createElement('a');
+                link.href = selectedInvoice.billImageUrl!;
+                link.download = `Bill_${selectedInvoice.invoiceNumber}.jpg`;
+                link.click();
+              }} className="gap-2">
+                <Download className="w-4 h-4" /> Download Image
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Update Bill Dialog */}
+      <Dialog open={isAddBillDialogOpen} onOpenChange={setIsAddBillDialogOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>{selectedInvoice?.billImageUrl ? 'Update' : 'Add'} Bill for {selectedInvoice?.invoiceNumber}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1 gap-2"
+                onClick={() => setIsCameraOpen(true)}
+              >
+                <Camera className="w-4 h-4" /> Take Photo
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1 gap-2"
+                onClick={() => document.getElementById('bill-upload-existing')?.click()}
+              >
+                <ImageIcon className="w-4 h-4" /> Browse
+              </Button>
+            </div>
+
+            <div 
+              className="w-full flex flex-col items-center justify-center border-2 border-dashed border-border-main rounded-xl p-8 hover:bg-slate-50 cursor-pointer transition-all relative overflow-hidden min-h-[250px]"
+              onClick={() => !tempBillUrl && setIsCameraOpen(true)}
+            >
+              {tempBillUrl ? (
+                <div className="relative group w-full flex justify-center">
+                  <img src={tempBillUrl} alt="Bill Preview" className="max-h-56 rounded shadow-md" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+                    <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setTempBillUrl(null); }}>
+                      <Trash2 className="w-4 h-4 mr-2" /> Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <Camera className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500 font-medium">Capture or Upload Bill</p>
+                  <p className="text-xs text-slate-400 mt-1">Image size will be optimized</p>
+                </div>
+              )}
+              <input 
+                id="bill-upload-existing" 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setTempBillUrl(reader.result as string);
+                    reader.readAsDataURL(file);
+                  }
+                }} 
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsAddBillDialogOpen(false); setTempBillUrl(null); }}>Cancel</Button>
+            <Button onClick={handleUpdateBill} disabled={!tempBillUrl} className="gap-2">
+              <Plus className="w-4 h-4" /> Save Bill
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <CameraCapture 
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={(img) => {
+          if (isAddBillDialogOpen) {
+            setTempBillUrl(img);
+          } else {
+            setBillImageUrl(img);
+          }
+        }}
+      />
     </div>
   );
 }

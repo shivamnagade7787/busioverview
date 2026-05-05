@@ -26,8 +26,14 @@ import {
   Edit2,
   MessageSquare,
   QrCode,
-  Download
+  Download,
+  Camera,
+  Image as ImageIcon,
+  Eye,
+  CheckCircle2,
+  X
 } from 'lucide-react';
+import CameraCapture from '@/src/components/CameraCapture';
 import { 
   Dialog, 
   DialogContent, 
@@ -75,6 +81,10 @@ export default function Sales() {
   const [quickAmount, setQuickAmount] = useState(0);
 
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isViewBillOpen, setIsViewBillOpen] = useState(false);
+  const [isAddBillDialogOpen, setIsAddBillDialogOpen] = useState(false);
+  const [tempBillUrl, setTempBillUrl] = useState<string | null>(null);
   const [sendInvoice, setSendInvoice] = useState(true);
   const [sendLanguage, setSendLanguage] = useState<'en' | 'mr'>(currentBusiness?.language || 'en');
 
@@ -255,6 +265,22 @@ export default function Sales() {
     setIsSendOpen(false);
   };
 
+  const handleUpdateBill = async () => {
+    if (!selectedInvoice || !tempBillUrl) return;
+
+    try {
+      const invoiceRef = doc(db, 'invoices', selectedInvoice.id);
+      await runTransaction(db, async (transaction) => {
+        transaction.update(invoiceRef, { billImageUrl: tempBillUrl });
+      });
+      toast.success('Document updated successfully');
+      setIsAddBillDialogOpen(false);
+      setTempBillUrl(null);
+    } catch (error) {
+      toast.error('Failed to update document');
+    }
+  };
+
   const generatePDF = (invoice: Invoice) => {
     try {
       const doc = new jsPDF();
@@ -272,10 +298,11 @@ export default function Sales() {
         professional: [30, 41, 59] // Slate
       };
       const themeColor = colors[template as keyof typeof colors] || colors.classic;
+      const pdfThemeColor = themeColor as [number, number, number];
 
       // Header
       if (template === 'modern') {
-        doc.setFillColor(themeColor[0], themeColor[1], themeColor[2]);
+        doc.setFillColor(pdfThemeColor[0], pdfThemeColor[1], pdfThemeColor[2]);
         doc.rect(0, 0, 210, 40, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(24);
@@ -326,7 +353,7 @@ export default function Sales() {
         head: [['Item', 'Qty', 'Price', 'GST', 'Total']],
         body: tableData,
         theme: template === 'compact' ? 'plain' : 'grid',
-        headStyles: { fillColor: themeColor }
+        headStyles: { fillColor: pdfThemeColor }
       });
       
       // Totals
@@ -645,6 +672,21 @@ export default function Sales() {
                           <DropdownMenuItem onClick={() => handleDeleteInvoice(inv)} className="text-danger">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedInvoice(inv);
+                            setTempBillUrl(inv.billImageUrl || null);
+                            setIsAddBillDialogOpen(true);
+                          }}>
+                            <Camera className="mr-2 h-4 w-4" /> {inv.billImageUrl ? 'Update Document' : 'Add Document'}
+                          </DropdownMenuItem>
+                          {inv.billImageUrl && (
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedInvoice(inv);
+                              setIsViewBillOpen(true);
+                            }}>
+                              <Eye className="mr-2 h-4 w-4" /> View Document
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -700,6 +742,126 @@ export default function Sales() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* View Bill Dialog */}
+        <Dialog open={isViewBillOpen} onOpenChange={setIsViewBillOpen}>
+          <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-white">
+            <DialogHeader className="p-4 border-b">
+              <DialogTitle className="flex justify-between items-center text-black">
+                <span>Invoice Document - {selectedInvoice?.invoiceNumber}</span>
+                <Button variant="ghost" size="icon-sm" onClick={() => setIsViewBillOpen(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="p-4 flex items-center justify-center bg-slate-50 min-h-[400px]">
+              {selectedInvoice?.billImageUrl ? (
+                <img 
+                  src={selectedInvoice.billImageUrl} 
+                  alt="Invoice Document" 
+                  className="max-w-full max-h-[70vh] rounded shadow-lg object-contain"
+                />
+              ) : (
+                <div className="text-center p-12">
+                  <ImageIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500">No document image associated with this invoice.</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="p-4 border-t bg-white">
+              <Button variant="outline" onClick={() => setIsViewBillOpen(false)}>Close</Button>
+              {selectedInvoice?.billImageUrl && (
+                <Button onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = selectedInvoice.billImageUrl!;
+                  link.download = `Doc_${selectedInvoice.invoiceNumber}.jpg`;
+                  link.click();
+                }} className="gap-2">
+                  <Download className="w-4 h-4" /> Download Image
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add/Update Bill Dialog */}
+        <Dialog open={isAddBillDialogOpen} onOpenChange={setIsAddBillDialogOpen}>
+          <DialogContent className="sm:max-w-[450px]">
+            <DialogHeader>
+              <DialogTitle>{selectedInvoice?.billImageUrl ? 'Update' : 'Add'} Document for {selectedInvoice?.invoiceNumber}</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1 gap-2"
+                  onClick={() => setIsCameraOpen(true)}
+                >
+                  <Camera className="w-4 h-4" /> Take Photo
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1 gap-2"
+                  onClick={() => document.getElementById('doc-upload-existing-sales')?.click()}
+                >
+                  <ImageIcon className="w-4 h-4" /> Browse
+                </Button>
+              </div>
+
+              <div 
+                className="w-full flex flex-col items-center justify-center border-2 border-dashed border-border-main rounded-xl p-8 hover:bg-slate-50 cursor-pointer transition-all relative overflow-hidden min-h-[250px]"
+                onClick={() => !tempBillUrl && setIsCameraOpen(true)}
+              >
+                {tempBillUrl ? (
+                  <div className="relative group w-full flex justify-center">
+                    <img src={tempBillUrl} alt="Document Preview" className="max-h-56 rounded shadow-md" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+                      <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setTempBillUrl(null); }}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Camera className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500 font-medium">Capture or Upload Document</p>
+                    <p className="text-xs text-slate-400 mt-1">Image size will be optimized</p>
+                  </div>
+                )}
+                <input 
+                  id="doc-upload-existing-sales" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setTempBillUrl(reader.result as string);
+                      reader.readAsDataURL(file);
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setIsAddBillDialogOpen(false); setTempBillUrl(null); }}>Cancel</Button>
+              <Button onClick={handleUpdateBill} disabled={!tempBillUrl} className="gap-2">
+                <Plus className="w-4 h-4" /> Save Document
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <CameraCapture 
+          isOpen={isCameraOpen}
+          onClose={() => setIsCameraOpen(false)}
+          onCapture={(img) => setTempBillUrl(img)}
+        />
       </div>
     </div>
   );
