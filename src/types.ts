@@ -8,6 +8,16 @@ export type InvoiceType = 'sale' | 'purchase' | 'estimate' | 'proforma';
 export type PaymentMode = 'cash' | 'bank' | 'upi';
 export type PaymentStatus = 'paid' | 'partial' | 'unpaid';
 
+export interface InventorySettings {
+  enableAlphanumericCodes: boolean;
+  enableAlphaToNumberMapping: boolean;
+  conversionLogic: 'prefix' | 'sum' | 'replace';
+  mappings: Record<string, number>;
+  enforcePositive?: boolean;
+  strictMode?: boolean;
+  allowDecimals?: boolean;
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -19,6 +29,7 @@ export interface Business {
   logoUrl?: string;
   invoiceTemplate?: 'classic' | 'modern' | 'compact' | 'professional';
   language?: 'en' | 'mr';
+  inventorySettings?: InventorySettings;
 }
 
 export interface UserProfile {

@@ -43,6 +43,7 @@ import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { toast } from 'sonner';
 import { Product } from '@/src/types';
 import { cn } from '@/lib/utils';
+import { convertToNumeric } from '@/src/lib/mappingService';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -52,12 +53,14 @@ import {
 
 export default function Inventory() {
   const { products, loading } = useBusiness();
-  const { user, profile } = useAuth();
+  const { user, profile, currentBusiness } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
+
+  const invSettings = currentBusiness?.inventorySettings;
+
   const [newProduct, setNewProduct] = useState({
     name: '',
     hsnCode: '',
@@ -71,6 +74,14 @@ export default function Inventory() {
     makingDate: '',
     reminderEnabled: false,
     reminderDate: ''
+  });
+
+  // Track raw string inputs for alphanumeric fields in forms
+  const [rawProductInputs, setRawProductInputs] = useState({
+    purchasePrice: '',
+    salePrice: '',
+    stockQuantity: '',
+    lowStockAlert: ''
   });
 
   const currency = profile?.currency || '₹';
@@ -112,6 +123,12 @@ export default function Inventory() {
         makingDate: '',
         reminderEnabled: false,
         reminderDate: ''
+      });
+      setRawProductInputs({
+        purchasePrice: '',
+        salePrice: '',
+        stockQuantity: '',
+        lowStockAlert: ''
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'products');
@@ -230,20 +247,30 @@ export default function Inventory() {
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase text-text-muted">Purchase Price</label>
                     <Input
-                      type="number"
+                      type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
                       placeholder="0.00"
-                      value={newProduct.purchasePrice}
-                      onChange={(e) => setNewProduct({ ...newProduct, purchasePrice: parseFloat(e.target.value) || 0 })}
+                      value={rawProductInputs.purchasePrice || newProduct.purchasePrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const numericVal = convertToNumeric(val, invSettings);
+                        setRawProductInputs(prev => ({ ...prev, purchasePrice: val }));
+                        setNewProduct({ ...newProduct, purchasePrice: numericVal });
+                      }}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase text-text-muted">Sale Price *</label>
                     <Input
                       required
-                      type="number"
+                      type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
                       placeholder="0.00"
-                      value={newProduct.salePrice}
-                      onChange={(e) => setNewProduct({ ...newProduct, salePrice: parseFloat(e.target.value) || 0 })}
+                      value={rawProductInputs.salePrice || newProduct.salePrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const numericVal = convertToNumeric(val, invSettings);
+                        setRawProductInputs(prev => ({ ...prev, salePrice: val }));
+                        setNewProduct({ ...newProduct, salePrice: numericVal });
+                      }}
                     />
                   </div>
                 </div>
@@ -252,19 +279,29 @@ export default function Inventory() {
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase text-text-muted">Opening Stock</label>
                     <Input
-                      type="number"
+                      type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
                       placeholder="0"
-                      value={newProduct.stockQuantity}
-                      onChange={(e) => setNewProduct({ ...newProduct, stockQuantity: parseFloat(e.target.value) || 0 })}
+                      value={rawProductInputs.stockQuantity || newProduct.stockQuantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const numericVal = convertToNumeric(val, invSettings);
+                        setRawProductInputs(prev => ({ ...prev, stockQuantity: val }));
+                        setNewProduct({ ...newProduct, stockQuantity: numericVal });
+                      }}
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase text-text-muted">Low Stock Alert</label>
                     <Input
-                      type="number"
+                      type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
                       placeholder="5"
-                      value={newProduct.lowStockAlert}
-                      onChange={(e) => setNewProduct({ ...newProduct, lowStockAlert: parseFloat(e.target.value) || 0 })}
+                      value={rawProductInputs.lowStockAlert || newProduct.lowStockAlert}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const numericVal = convertToNumeric(val, invSettings);
+                        setRawProductInputs(prev => ({ ...prev, lowStockAlert: val }));
+                        setNewProduct({ ...newProduct, lowStockAlert: numericVal });
+                      }}
                     />
                   </div>
                 </div>
@@ -486,18 +523,28 @@ export default function Inventory() {
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-text-muted">Purchase Price</label>
                   <Input
-                    type="number"
-                    value={newProduct.purchasePrice}
-                    onChange={(e) => setNewProduct({ ...newProduct, purchasePrice: parseFloat(e.target.value) || 0 })}
+                    type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
+                    value={rawProductInputs.purchasePrice || newProduct.purchasePrice}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const numericVal = convertToNumeric(val, invSettings);
+                      setRawProductInputs(prev => ({ ...prev, purchasePrice: val }));
+                      setNewProduct({ ...newProduct, purchasePrice: numericVal });
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-text-muted">Sale Price *</label>
                   <Input
                     required
-                    type="number"
-                    value={newProduct.salePrice}
-                    onChange={(e) => setNewProduct({ ...newProduct, salePrice: parseFloat(e.target.value) || 0 })}
+                    type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
+                    value={rawProductInputs.salePrice || newProduct.salePrice}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const numericVal = convertToNumeric(val, invSettings);
+                      setRawProductInputs(prev => ({ ...prev, salePrice: val }));
+                      setNewProduct({ ...newProduct, salePrice: numericVal });
+                    }}
                   />
                 </div>
               </div>
@@ -505,17 +552,27 @@ export default function Inventory() {
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-text-muted">Stock Quantity</label>
                   <Input
-                    type="number"
-                    value={newProduct.stockQuantity}
-                    onChange={(e) => setNewProduct({ ...newProduct, stockQuantity: parseFloat(e.target.value) || 0 })}
+                    type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
+                    value={rawProductInputs.stockQuantity || newProduct.stockQuantity}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const numericVal = convertToNumeric(val, invSettings);
+                      setRawProductInputs(prev => ({ ...prev, stockQuantity: val }));
+                      setNewProduct({ ...newProduct, stockQuantity: numericVal });
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-text-muted">Low Stock Alert</label>
                   <Input
-                    type="number"
-                    value={newProduct.lowStockAlert}
-                    onChange={(e) => setNewProduct({ ...newProduct, lowStockAlert: parseFloat(e.target.value) || 0 })}
+                    type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
+                    value={rawProductInputs.lowStockAlert || newProduct.lowStockAlert}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const numericVal = convertToNumeric(val, invSettings);
+                      setRawProductInputs(prev => ({ ...prev, lowStockAlert: val }));
+                      setNewProduct({ ...newProduct, lowStockAlert: numericVal });
+                    }}
                   />
                 </div>
               </div>

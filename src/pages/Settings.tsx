@@ -18,12 +18,131 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { User, Building2, Coins, MapPin, Phone, FileText, QrCode, Languages, Layout, Copy } from 'lucide-react';
+import { 
+  User, 
+  Building2, 
+  Coins, 
+  MapPin, 
+  Phone, 
+  FileText, 
+  QrCode, 
+  Languages, 
+  Layout, 
+  Copy,
+  Settings as SettingsIcon,
+  Plus,
+  Trash2,
+  Info,
+  ChevronRight,
+  Database,
+  ArrowRightLeft,
+  Download,
+  Upload,
+  ShieldCheck
+} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { Switch } from '@/components/ui/switch';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { convertToNumeric } from '@/src/lib/mappingService';
+import { InventorySettings } from '../types';
 
 export default function Settings() {
   const { user, profile, currentBusiness } = useAuth();
   const [loading, setLoading] = useState(false);
+  
+  // Inventory Settings State
+  const [invSettings, setInvSettings] = useState<InventorySettings>(
+    currentBusiness?.inventorySettings || {
+      enableAlphanumericCodes: false,
+      enableAlphaToNumberMapping: false,
+      conversionLogic: 'prefix',
+      mappings: {},
+      enforcePositive: true,
+      strictMode: false,
+      allowDecimals: true
+    }
+  );
+
+  const [newMappingCode, setNewMappingCode] = useState('');
+  const [newMappingValue, setNewMappingValue] = useState('');
+  const [testInput, setTestInput] = useState('');
+
+  const addMapping = () => {
+    if (!newMappingCode || !newMappingValue) {
+      toast.error('Enter both code and value');
+      return;
+    }
+    if (/[0-9]/.test(newMappingCode)) {
+      toast.error('Code should only contain alphabets');
+      return;
+    }
+    
+    setInvSettings(prev => ({
+      ...prev,
+      mappings: {
+        ...prev.mappings,
+        [newMappingCode.toUpperCase()]: Number(newMappingValue)
+      }
+    }));
+    setNewMappingCode('');
+    setNewMappingValue('');
+  };
+
+  const removeMapping = (code: string) => {
+    const newMappings = { ...invSettings.mappings };
+    delete newMappings[code];
+    setInvSettings(prev => ({ ...prev, mappings: newMappings }));
+  };
+
+  const handleExportMappings = () => {
+    const data = JSON.stringify(invSettings.mappings, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inventory_mappings_${currentBusiness?.name || 'export'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Mappings exported successfully');
+  };
+
+  const handleImportMappings = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (typeof json !== 'object') throw new Error('Invalid format');
+        
+        // Basic validation: all values should be numbers
+        const cleaned: Record<string, number> = {};
+        Object.entries(json).forEach(([k, v]) => {
+          if (typeof v === 'number') cleaned[k.toUpperCase()] = v;
+        });
+
+        setInvSettings(prev => ({
+          ...prev,
+          mappings: { ...prev.mappings, ...cleaned }
+        }));
+        toast.success(`Imported ${Object.keys(cleaned).length} mappings`);
+      } catch (err) {
+        toast.error('Failed to import mappings. Use a valid JSON file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
 
   const handleUpdateBusiness = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,9 +160,15 @@ export default function Settings() {
     const language = formData.get('language') as any;
 
     try {
+      const updatedBusiness = { 
+        ...currentBusiness,
+        name, currency, gstNumber, address, phone, upiId, invoiceTemplate, language,
+        inventorySettings: invSettings
+      };
+
       const updatedBusinesses = profile.businesses.map(b => 
         b.id === currentBusiness.id 
-          ? { ...b, name, currency, gstNumber, address, phone, upiId, invoiceTemplate, language }
+          ? updatedBusiness as any
           : b
       );
 
@@ -53,28 +178,20 @@ export default function Settings() {
 
       // Also update global businesses collection
       await updateDoc(doc(db, 'businesses', currentBusiness.id), {
-        name,
-        currency,
-        gstNumber,
-        address,
-        phone,
-        upiId,
-        invoiceTemplate,
-        language,
+        ...updatedBusiness,
         updatedAt: new Date().toISOString()
       }).catch(err => {
         // If it doesn't exist in global collection yet (old business), create it
         if (err.code === 'not-found') {
           setDoc(doc(db, 'businesses', currentBusiness.id), {
-            ...currentBusiness,
-            name, currency, gstNumber, address, phone, upiId, invoiceTemplate, language,
+            ...updatedBusiness,
             ownerId: user.uid,
             createdAt: new Date().toISOString()
           });
         }
       });
 
-      toast.success('Business settings updated');
+      toast.success('Settings updated successfully');
     } catch (error) {
       console.error(error);
       toast.error('Failed to update settings');
@@ -264,6 +381,216 @@ export default function Settings() {
                   >
                     <Copy className="w-3 h-3" />
                   </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="md:col-span-3">
+          <div className="panel-card">
+            <div className="text-base font-bold mb-6 flex items-center gap-2">
+              <SettingsIcon className="w-5 h-5 text-primary" />
+              Inventory & Input Customization
+            </div>
+
+            <div className="space-y-8">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold">Enable Alphanumeric Codes</Label>
+                      <p className="text-[11px] text-text-muted">Allow alphabets in purchase quantity & value fields.</p>
+                    </div>
+                    <Switch 
+                      checked={invSettings.enableAlphanumericCodes}
+                      onCheckedChange={(val) => setInvSettings(prev => ({ ...prev, enableAlphanumericCodes: val }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold">Smart Alphabet-to-Number Conversion</Label>
+                      <p className="text-[11px] text-text-muted">Automatically convert mappings during calculations.</p>
+                    </div>
+                    <Switch 
+                      checked={invSettings.enableAlphaToNumberMapping}
+                      onCheckedChange={(val) => setInvSettings(prev => ({ ...prev, enableAlphaToNumberMapping: val }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[13px] font-semibold">Conversion Logic</Label>
+                    <Select 
+                      value={invSettings.conversionLogic} 
+                      onValueChange={(val: any) => setInvSettings(prev => ({ ...prev, conversionLogic: val }))}
+                    >
+                      <SelectTrigger className="border-border-main">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prefix">Prefix (A=10, A5 → 105)</SelectItem>
+                        <SelectItem value="sum">Sum/Segment (Advanced Pattern Matching)</SelectItem>
+                        <SelectItem value="replace">Direct Replace (Full Code Match Only)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="panel-card bg-primary/5 border-primary/10">
+                  <div className="text-sm font-bold mb-4 flex items-center gap-2 text-primary">
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Preview / Test Converter
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[11px] uppercase font-bold text-text-muted">Test Input</Label>
+                      <Input 
+                        placeholder="e.g. A5 or BOX-10" 
+                        value={testInput}
+                        onChange={(e) => setTestInput(e.target.value)}
+                        className="bg-white"
+                      />
+                    </div>
+                    <div className="p-4 bg-white rounded-lg border border-primary/20 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-text-muted">Numeric Equivalent:</span>
+                      <span className="text-xl font-bold text-primary">
+                        {testInput ? convertToNumeric(testInput, invSettings) : '0'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-text-muted italic">
+                      * Values are converted real-time based on your mapping table below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-bold">Alphabet-Number Mapping Table</Label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="file" 
+                      id="import-mappings" 
+                      className="hidden" 
+                      accept=".json" 
+                      onChange={handleImportMappings} 
+                    />
+                    <Button variant="outline" size="sm" onClick={() => document.getElementById('import-mappings')?.click()} className="gap-2">
+                      <Upload className="w-3 h-3" /> Import
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExportMappings} className="gap-2">
+                      <Download className="w-3 h-3" /> Export
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      if(confirm('Are you sure you want to clear all mappings?')) {
+                        setInvSettings(prev => ({ ...prev, mappings: {} }));
+                      }
+                    }}>Reset</Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-4 items-end bg-slate-50 p-4 rounded-lg border border-border-main">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="text-[11px] uppercase font-bold text-text-muted">Alphabet Code</Label>
+                    <Input 
+                      placeholder="e.g. A or BOX" 
+                      value={newMappingCode}
+                      onChange={(e) => setNewMappingCode(e.target.value.toUpperCase())}
+                      className="bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase font-bold text-text-muted">Value</Label>
+                    <Input 
+                      type="number"
+                      placeholder="Numeric value" 
+                      value={newMappingValue}
+                      onChange={(e) => setNewMappingValue(e.target.value)}
+                      className="bg-white"
+                    />
+                  </div>
+                  <Button className="w-full gap-2" onClick={addMapping}>
+                    <Plus className="w-4 h-4" /> Add Mapping
+                  </Button>
+                </div>
+
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead>Alphabet Code</TableHead>
+                        <TableHead>Numeric Value</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Object.keys(invSettings.mappings).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8 text-text-muted text-xs">
+                            No custom mappings defined. Add codes like A=10, B=20 above.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        Object.entries(invSettings.mappings).map(([code, value]) => (
+                          <TableRow key={code}>
+                            <TableCell className="font-bold">{code}</TableCell>
+                            <TableCell>{value}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="icon-sm" 
+                                className="text-danger hover:bg-danger/10"
+                                onClick={() => removeMapping(code)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Validation Rules Manager */}
+              <div className="space-y-4 border-t pt-8">
+                <div className="text-sm font-bold flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  Validation Rules Manager
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                    <div className="space-y-0.5">
+                      <Label className="text-[12px] font-bold">Strict Mode</Label>
+                      <p className="text-[10px] text-text-muted">Only allow valid mappings.</p>
+                    </div>
+                    <Switch 
+                      checked={invSettings.strictMode}
+                      onCheckedChange={(val) => setInvSettings(prev => ({ ...prev, strictMode: val }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                    <div className="space-y-0.5">
+                      <Label className="text-[12px] font-bold">Force Positive</Label>
+                      <p className="text-[10px] text-text-muted">No negative results.</p>
+                    </div>
+                    <Switch 
+                      checked={invSettings.enforcePositive}
+                      onCheckedChange={(val) => setInvSettings(prev => ({ ...prev, enforcePositive: val }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                    <div className="space-y-0.5">
+                      <Label className="text-[12px] font-bold">Allow Decimals</Label>
+                      <p className="text-[10px] text-text-muted">Support decimal values.</p>
+                    </div>
+                    <Switch 
+                      checked={invSettings.allowDecimals}
+                      onCheckedChange={(val) => setInvSettings(prev => ({ ...prev, allowDecimals: val }))}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

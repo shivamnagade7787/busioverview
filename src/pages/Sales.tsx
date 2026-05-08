@@ -55,6 +55,7 @@ import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { toast } from 'sonner';
 import { Invoice, InvoiceItem, Party, Product, InvoiceType, PaymentMode } from '@/src/types';
 import { cn } from '@/lib/utils';
+import { convertToNumeric } from '@/src/lib/mappingService';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -79,6 +80,7 @@ export default function Sales() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState('');
   const [quickAmount, setQuickAmount] = useState(0);
+  const [billImageUrl, setBillImageUrl] = useState<string | null>(null);
 
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -90,6 +92,11 @@ export default function Sales() {
 
   const currency = profile?.currency || '₹';
   const businessId = profile?.currentBusinessId;
+  const invSettings = currentBusiness?.inventorySettings;
+
+  // Track raw string inputs for alphanumeric fields
+  const [rawInputs, setRawInputs] = useState<Record<string, { qty: string; price: string }>>({});
+  const [rawQuickAmount, setRawQuickAmount] = useState('');
 
   const totals = useMemo(() => {
     if (invoiceItems.length === 0 && quickAmount > 0) {
@@ -173,6 +180,7 @@ export default function Sales() {
           paymentStatus: paidAmount >= totals.grandTotal ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid',
           paymentMode,
           notes,
+          billImageUrl,
           createdAt: serverTimestamp(),
         };
 
@@ -384,6 +392,9 @@ export default function Sales() {
     setPaidAmount(0);
     setNotes('');
     setQuickAmount(0);
+    setBillImageUrl(null);
+    setRawInputs({});
+    setRawQuickAmount('');
   };
 
   if (loading) return <div className="flex items-center justify-center h-full">Loading sales...</div>;
@@ -446,11 +457,16 @@ export default function Sales() {
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-text-muted">Quick Amount (No Items)</label>
                   <Input 
-                    type="number" 
+                    type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
                     placeholder="Enter total amount" 
-                    value={quickAmount}
+                    value={rawQuickAmount || quickAmount}
                     disabled={invoiceItems.length > 0}
-                    onChange={(e) => setQuickAmount(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const numericVal = convertToNumeric(val, invSettings);
+                      setRawQuickAmount(val);
+                      setQuickAmount(numericVal);
+                    }}
                   />
                 </div>
 
@@ -479,7 +495,7 @@ export default function Sales() {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead className="text-[10px] uppercase font-bold">Item</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold w-[80px]">Qty</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold w-[120px]">Qty</TableHead>
                         <TableHead className="text-[10px] uppercase font-bold text-right">Price</TableHead>
                         <TableHead className="text-[10px] uppercase font-bold text-right">Total</TableHead>
                         <TableHead className="w-[40px]"></TableHead>
@@ -491,18 +507,40 @@ export default function Sales() {
                           <TableCell className="text-xs font-medium">{item.name}</TableCell>
                           <TableCell>
                             <Input
-                              type="number"
+                              type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
                               className="h-7 text-xs px-2"
-                              value={item.quantity}
+                              value={rawInputs[item.productId]?.qty ?? item.quantity}
                               onChange={(e) => {
-                                const qty = parseFloat(e.target.value) || 0;
+                                const val = e.target.value;
+                                const numericVal = convertToNumeric(val, invSettings);
+                                setRawInputs(prev => ({
+                                  ...prev,
+                                  [item.productId]: { ...prev[item.productId], qty: val }
+                                }));
                                 setInvoiceItems(invoiceItems.map(i => 
-                                  i.productId === item.productId ? { ...i, quantity: qty, total: qty * i.price } : i
+                                  i.productId === item.productId ? { ...i, quantity: numericVal, total: numericVal * i.price } : i
                                 ));
                               }}
                             />
                           </TableCell>
-                          <TableCell className="text-right text-xs">{currency}{item.price}</TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
+                              className="h-7 text-xs px-2 text-right inline-block w-24"
+                              value={rawInputs[item.productId]?.price ?? item.price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const numericVal = convertToNumeric(val, invSettings);
+                                setRawInputs(prev => ({
+                                  ...prev,
+                                  [item.productId]: { ...prev[item.productId], price: val }
+                                }));
+                                setInvoiceItems(invoiceItems.map(i => 
+                                  i.productId === item.productId ? { ...i, price: numericVal, total: item.quantity * numericVal } : i
+                                ));
+                              }}
+                            />
+                          </TableCell>
                           <TableCell className="text-right text-xs font-bold">{currency}{item.total}</TableCell>
                           <TableCell>
                             <button onClick={() => handleRemoveItem(item.productId)} className="text-danger">
@@ -550,6 +588,75 @@ export default function Sales() {
                         onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                         className="font-bold text-success"
                       />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-text-muted">Document (Photo/Browse)</label>
+                    <div className="flex gap-2 mb-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => setIsCameraOpen(true)}
+                      >
+                        <Camera className="w-4 h-4" /> Take Photo
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2"
+                        onClick={() => document.getElementById('sale-doc-upload')?.click()}
+                      >
+                        <ImageIcon className="w-4 h-4" /> Browse
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div 
+                        className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-border-main rounded-lg p-4 hover:bg-slate-50 cursor-pointer transition-all relative overflow-hidden"
+                        onClick={() => !billImageUrl && setIsCameraOpen(true)}
+                      >
+                        {billImageUrl ? (
+                          <div className="relative group">
+                            <img src={billImageUrl} alt="Doc Preview" className="max-h-32 rounded shadow-sm" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+                              <CheckCircle2 className="text-white w-8 h-8" />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <Camera className="w-6 h-6 text-text-muted mb-1" />
+                            <span className="text-[10px] text-text-muted font-bold uppercase text-center">Capture Document</span>
+                          </>
+                        )}
+                        <input 
+                          id="sale-doc-upload" 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => setBillImageUrl(reader.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                          }} 
+                        />
+                      </div>
+                      {billImageUrl && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon-sm" 
+                          className="text-danger"
+                          onClick={() => setBillImageUrl(null)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -860,7 +967,13 @@ export default function Sales() {
         <CameraCapture 
           isOpen={isCameraOpen}
           onClose={() => setIsCameraOpen(false)}
-          onCapture={(img) => setTempBillUrl(img)}
+          onCapture={(img) => {
+            if (isAddBillDialogOpen) {
+              setTempBillUrl(img);
+            } else {
+              setBillImageUrl(img);
+            }
+          }}
         />
       </div>
     </div>

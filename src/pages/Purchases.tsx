@@ -50,6 +50,7 @@ import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { toast } from 'sonner';
 import { Invoice, InvoiceItem, Party, Product, InvoiceType, PaymentMode } from '@/src/types';
 import { cn } from '@/lib/utils';
+import { convertToNumeric } from '@/src/lib/mappingService';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -79,6 +80,10 @@ export default function Purchases() {
 
   const currency = profile?.currency || '₹';
   const businessId = profile?.currentBusinessId;
+  const invSettings = currentBusiness?.inventorySettings;
+
+  // Track raw string inputs for alphanumeric fields
+  const [rawInputs, setRawInputs] = useState<Record<string, { qty: string; price: string }>>({});
 
   const totals = useMemo(() => {
     const subTotal = invoiceItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -210,6 +215,7 @@ export default function Purchases() {
     setPaidAmount(0);
     setNotes('');
     setBillImageUrl(null);
+    setRawInputs({});
   };
 
   const handleUpdateBill = async () => {
@@ -387,7 +393,7 @@ export default function Purchases() {
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead className="text-[10px] uppercase font-bold">Item</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold w-[80px]">Qty</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold w-[120px]">Qty</TableHead>
                         <TableHead className="text-[10px] uppercase font-bold text-right">Cost</TableHead>
                         <TableHead className="text-[10px] uppercase font-bold text-right">Total</TableHead>
                         <TableHead className="w-[40px]"></TableHead>
@@ -399,18 +405,44 @@ export default function Purchases() {
                           <TableCell className="text-xs font-medium">{item.name}</TableCell>
                           <TableCell>
                             <Input
-                              type="number"
+                              type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
                               className="h-7 text-xs px-2"
-                              value={item.quantity}
+                              value={rawInputs[item.productId]?.qty ?? item.quantity}
                               onChange={(e) => {
-                                const qty = parseFloat(e.target.value) || 0;
+                                const val = e.target.value;
+                                const numericVal = convertToNumeric(val, invSettings);
+                                
+                                setRawInputs(prev => ({
+                                  ...prev,
+                                  [item.productId]: { ...prev[item.productId], qty: val }
+                                }));
+
                                 setInvoiceItems(invoiceItems.map(i => 
-                                  i.productId === item.productId ? { ...i, quantity: qty, total: qty * i.price } : i
+                                  i.productId === item.productId ? { ...i, quantity: numericVal, total: numericVal * i.price } : i
                                 ));
                               }}
                             />
                           </TableCell>
-                          <TableCell className="text-right text-xs">{currency}{item.price}</TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type={invSettings?.enableAlphanumericCodes ? "text" : "number"}
+                              className="h-7 text-xs px-2 text-right inline-block w-24"
+                              value={rawInputs[item.productId]?.price ?? item.price}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const numericVal = convertToNumeric(val, invSettings);
+
+                                setRawInputs(prev => ({
+                                  ...prev,
+                                  [item.productId]: { ...prev[item.productId], price: val }
+                                }));
+
+                                setInvoiceItems(invoiceItems.map(i => 
+                                  i.productId === item.productId ? { ...i, price: numericVal, total: item.quantity * numericVal } : i
+                                ));
+                              }}
+                            />
+                          </TableCell>
                           <TableCell className="text-right text-xs font-bold">{currency}{item.total}</TableCell>
                           <TableCell>
                             <button onClick={() => handleRemoveItem(item.productId)} className="text-danger">

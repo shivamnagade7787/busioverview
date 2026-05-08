@@ -13,6 +13,18 @@
         "phone": { "type": "string" },
         "currency": { "type": "string" },
         "logoUrl": { "type": "string" },
+        "inventorySettings": {
+          "type": "object",
+          "properties": {
+            "enableAlphanumericCodes": { "type": "boolean" },
+            "enableAlphaToNumberMapping": { "type": "boolean" },
+            "conversionLogic": { "type": "string", "enum": ["prefix", "sum", "replace"] },
+            "mappings": {
+              "type": "object",
+              "additionalProperties": { "type": "number" }
+            }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "businessName", "currency", "createdAt"]
