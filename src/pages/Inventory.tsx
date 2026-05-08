@@ -351,7 +351,9 @@ export default function Inventory() {
       <div className="grid gap-5 md:grid-cols-3">
         <div className="stat-card">
           <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold mb-2">Total Stock Value</div>
-          <div className="text-2xl font-bold text-text-main">{currency}{(totalStockValue || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-text-main">
+            <PrivacyValue value={(totalStockValue || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 text-text-muted">Based on sale price</div>
         </div>
         <div className="stat-card">
@@ -388,6 +390,7 @@ export default function Inventory() {
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Product Details</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Category</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Stock</TableHead>
+                <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted text-right">Purchase Price</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted text-right">Sale Price</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
@@ -423,6 +426,11 @@ export default function Inventory() {
                         <span className="text-[10px] text-danger font-bold uppercase">Low Stock</span>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-bold text-text-muted">
+                      <PrivacyValue value={(product.purchasePrice || 0).toLocaleString()} fieldId="purchase_price" prefix={currency} />
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <span className="font-bold text-text-main">
