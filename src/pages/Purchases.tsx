@@ -389,15 +389,15 @@ export default function Purchases() {
               </div>
 
               <div className="md:col-span-2 space-y-4">
-                <div className="rounded-lg border overflow-hidden">
+                <div className="rounded-lg border border-border-main overflow-hidden">
                   <Table>
-                    <TableHeader className="bg-slate-50">
-                      <TableRow>
-                        <TableHead className="text-[10px] uppercase font-bold">Item</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold w-[120px]">Qty</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold text-right">Cost</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold text-right">Total</TableHead>
-                        <TableHead className="w-[40px]"></TableHead>
+                    <TableHeader className="bg-muted">
+                      <TableRow className="border-border-main">
+                        <TableHead className="text-[10px] uppercase font-bold text-text-muted">Item</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold w-[120px] text-text-muted">Qty</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold text-right text-text-muted">Cost</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold text-right text-text-muted">Total</TableHead>
+                        <TableHead className="w-[40px] text-text-muted"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -549,18 +549,18 @@ export default function Purchases() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-text-muted">Sub Total</span>
-                      <span>{currency}{(totals.subTotal || 0).toLocaleString()}</span>
+                      <span><PrivacyValue value={(totals.subTotal || 0).toLocaleString()} fieldId="purchase_price" prefix={currency} /></span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-text-muted">Tax (GST)</span>
-                      <span>{currency}{(totals.taxTotal || 0).toLocaleString()}</span>
+                      <span><PrivacyValue value={(totals.taxTotal || 0).toLocaleString()} fieldId="purchase_price" prefix={currency} /></span>
                     </div>
-                    <div className="flex justify-between text-base font-bold pt-2 border-t">
+                    <div className="flex justify-between text-base font-bold pt-2 border-t border-border-main">
                       <span>Grand Total</span>
-                      <span className="text-primary">{currency}{(totals.grandTotal || 0).toLocaleString()}</span>
+                      <span className="text-primary"><PrivacyValue value={(totals.grandTotal || 0).toLocaleString()} fieldId="purchase_price" prefix={currency} /></span>
                     </div>
                   </div>
                 </div>
@@ -580,18 +580,18 @@ export default function Purchases() {
       <div className="panel-card">
         <div className="rounded-xl border border-border-main overflow-hidden">
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader className="bg-muted">
               <TableRow className="hover:bg-transparent border-border-main">
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Bill Info</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Supplier</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Status</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted text-right">Total</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
+                <TableHead className="w-[80px] text-text-muted"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoices.filter(inv => inv.type === 'purchase').map((inv) => (
-                <TableRow key={inv.id} className="border-border-main hover:bg-slate-50/50 transition-colors">
+                <TableRow key={inv.id} className="border-border-main hover:bg-muted transition-colors">
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-bold text-text-main">{inv.invoiceNumber}</span>

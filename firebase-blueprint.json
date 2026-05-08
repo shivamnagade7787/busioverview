@@ -72,6 +72,19 @@
         "lowStockAlert": { "type": "number" },
         "category": { "type": "string" },
         "unit": { "type": "string", "enum": ["pcs", "kg", "mtr", "box"] },
+        "makingDate": { "type": "string" },
+        "reminders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "date": { "type": "string" },
+              "enabled": { "type": "boolean" }
+            }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "name", "salePrice", "stockQuantity", "createdAt"]

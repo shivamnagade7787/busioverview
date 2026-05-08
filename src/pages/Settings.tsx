@@ -369,11 +369,17 @@ export default function Settings() {
               <QrCode className="w-5 h-5 text-primary" />
               UPI QR Code
             </div>
-            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-lg border border-border-main">
+            <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-lg border border-border-main">
               {upiLink ? (
                 <>
-                  <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
-                    <QRCodeSVG value={upiLink} size={150} />
+                  <div className="bg-card p-4 rounded-xl shadow-sm mb-4 border">
+                    <QRCodeSVG 
+                      value={upiLink} 
+                      size={150} 
+                      bgColor="transparent" 
+                      fgColor="currentColor" 
+                      className="text-foreground"
+                    />
                   </div>
                   <div className="text-center">
                     <div className="text-xs font-bold text-text-muted uppercase mb-1">Your UPI ID</div>
@@ -395,11 +401,11 @@ export default function Settings() {
               Account Info
             </div>
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-lg border border-border-main">
+              <div className="p-4 bg-muted rounded-lg border border-border-main">
                 <div className="text-[11px] text-text-muted uppercase font-bold mb-1">Email Address</div>
                 <div className="text-sm font-medium">{user?.email}</div>
               </div>
-              <div className="p-4 bg-slate-50 rounded-lg border border-border-main">
+              <div className="p-4 bg-muted rounded-lg border border-border-main">
                 <div className="text-[11px] text-text-muted uppercase font-bold mb-1">Business ID</div>
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-[11px] font-mono text-text-muted break-all">{currentBusiness?.id}</div>
@@ -431,7 +437,7 @@ export default function Settings() {
             <div className="space-y-8">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border-main">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-bold">Global Privacy Mode</Label>
                       <p className="text-[11px] text-text-muted">Hide numeric values across selected modules.</p>
@@ -474,7 +480,7 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border-main">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-bold">Require PIN to Reveal</Label>
                       <p className="text-[11px] text-text-muted">Users must enter PIN to view hidden values.</p>
@@ -511,8 +517,8 @@ export default function Settings() {
                       className={cn(
                         "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
                         privacySettings.hiddenFields.includes(field.id) 
-                          ? "bg-primary/10 border-primary text-primary" 
-                          : "bg-white border-border-main hover:bg-slate-50"
+                          ? "bg-primary/20 border-primary text-primary" 
+                          : "bg-card border-border-main hover:bg-muted"
                       )}
                     >
                       <span className="text-xs font-bold">{field.label}</span>
@@ -525,11 +531,11 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="panel-card bg-slate-50 border-border-main p-4 flex items-center justify-between">
+              <div className="panel-card bg-muted border-border-main p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "p-2 rounded-lg",
-                    privacySettings.hideNumericValues ? "bg-primary/20 text-primary" : "bg-slate-200 text-slate-500"
+                    privacySettings.hideNumericValues ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground border"
                   )}>
                     <Info className="w-5 h-5" />
                   </div>
@@ -538,7 +544,7 @@ export default function Settings() {
                     <span className="text-xs text-text-muted">Check how your values appear below:</span>
                   </div>
                 </div>
-                <div className="text-xl font-bold bg-white px-6 py-2 rounded-lg border shadow-sm">
+                <div className="text-xl font-bold bg-card px-6 py-2 rounded-lg border shadow-sm">
                   <PrivacyValue 
                     value="₹1,25,000" 
                     fieldId={privacySettings.hiddenFields[0] || 'totals'} 
@@ -560,7 +566,7 @@ export default function Settings() {
             <div className="space-y-8">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border-main">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-bold">Enable Alphanumeric Codes</Label>
                       <p className="text-[11px] text-text-muted">Allow alphabets in purchase quantity & value fields.</p>
@@ -571,7 +577,7 @@ export default function Settings() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border-main">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-bold">Smart Alphabet-to-Number Conversion</Label>
                       <p className="text-[11px] text-text-muted">Automatically convert mappings during calculations.</p>
@@ -612,10 +618,10 @@ export default function Settings() {
                         placeholder="e.g. A5 or BOX-10" 
                         value={testInput}
                         onChange={(e) => setTestInput(e.target.value)}
-                        className="bg-white"
+                        className="bg-card"
                       />
                     </div>
-                    <div className="p-4 bg-white rounded-lg border border-primary/20 flex items-center justify-between">
+                    <div className="p-4 bg-card rounded-lg border border-primary/20 flex items-center justify-between">
                       <span className="text-xs font-semibold text-text-muted">Numeric Equivalent:</span>
                       <span className="text-xl font-bold text-primary">
                         {testInput ? convertToNumeric(testInput, invSettings) : '0'}
@@ -653,14 +659,14 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-4 items-end bg-slate-50 p-4 rounded-lg border border-border-main">
+                <div className="grid gap-4 md:grid-cols-4 items-end bg-muted p-4 rounded-lg border border-border-main">
                   <div className="md:col-span-2 space-y-2">
                     <Label className="text-[11px] uppercase font-bold text-text-muted">Alphabet Code</Label>
                     <Input 
                       placeholder="e.g. A or BOX" 
                       value={newMappingCode}
                       onChange={(e) => setNewMappingCode(e.target.value.toUpperCase())}
-                      className="bg-white"
+                      className="bg-card"
                     />
                   </div>
                   <div className="space-y-2">
@@ -670,7 +676,7 @@ export default function Settings() {
                       placeholder="Numeric value" 
                       value={newMappingValue}
                       onChange={(e) => setNewMappingValue(e.target.value)}
-                      className="bg-white"
+                      className="bg-card"
                     />
                   </div>
                   <Button className="w-full gap-2" onClick={addMapping}>
@@ -680,7 +686,7 @@ export default function Settings() {
 
                 <div className="rounded-lg border overflow-hidden">
                   <Table>
-                    <TableHeader className="bg-slate-50">
+                    <TableHeader className="bg-muted">
                       <TableRow>
                         <TableHead>Alphabet Code</TableHead>
                         <TableHead>Numeric Value</TableHead>
@@ -724,7 +730,7 @@ export default function Settings() {
                   Validation Rules Manager
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border-main">
                     <div className="space-y-0.5">
                       <Label className="text-[12px] font-bold">Strict Mode</Label>
                       <p className="text-[10px] text-text-muted">Only allow valid mappings.</p>
@@ -734,7 +740,7 @@ export default function Settings() {
                       onCheckedChange={(val) => setInvSettings(prev => ({ ...prev, strictMode: val }))}
                     />
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border-main">
                     <div className="space-y-0.5">
                       <Label className="text-[12px] font-bold">Force Positive</Label>
                       <p className="text-[10px] text-text-muted">No negative results.</p>
@@ -744,7 +750,7 @@ export default function Settings() {
                       onCheckedChange={(val) => setInvSettings(prev => ({ ...prev, enforcePositive: val }))}
                     />
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border-main">
                     <div className="space-y-0.5">
                       <Label className="text-[12px] font-bold">Allow Decimals</Label>
                       <p className="text-[10px] text-text-muted">Support decimal values.</p>

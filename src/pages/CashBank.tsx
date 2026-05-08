@@ -38,6 +38,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { collection, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { PrivacyValue } from '../components/PrivacyValue';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -202,7 +203,9 @@ export default function CashBank() {
           <div className="flex justify-between items-start">
             <div>
               <div className="text-[12px] opacity-80 uppercase tracking-wider font-bold mb-2">Cash in Hand</div>
-              <div className="text-4xl font-bold">{currency}{(cashInHand || 0).toLocaleString()}</div>
+              <div className="text-4xl font-bold">
+                <PrivacyValue value={(cashInHand || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+              </div>
             </div>
             <div className="p-3 bg-white/20 rounded-xl">
               <Wallet className="w-6 h-6" />
@@ -217,7 +220,9 @@ export default function CashBank() {
           <div className="flex justify-between items-start">
             <div>
               <div className="text-[12px] opacity-80 uppercase tracking-wider font-bold mb-2">Bank Balance</div>
-              <div className="text-4xl font-bold">{currency}{(totalBankBalance || 0).toLocaleString()}</div>
+              <div className="text-4xl font-bold">
+                <PrivacyValue value={(totalBankBalance || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+              </div>
             </div>
             <div className="p-3 bg-white/20 rounded-xl">
               <Building2 className="w-6 h-6" />
@@ -235,12 +240,14 @@ export default function CashBank() {
           {bankAccounts.map((account) => (
             <div key={account.id} className="p-4 rounded-xl border border-border-main hover:border-primary/50 transition-all group relative">
               <div className="flex justify-between items-start mb-4">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-primary">
+                <div className="w-10 h-10 bg-muted border border-border-main rounded-lg flex items-center justify-center text-primary">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-text-muted uppercase font-bold">Balance</div>
-                  <div className="text-lg font-bold text-text-main">{currency}{(account.balance || 0).toLocaleString()}</div>
+                  <div className="text-lg font-bold text-text-main">
+                    <PrivacyValue value={(account.balance || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+                  </div>
                 </div>
               </div>
               <div className="space-y-1">

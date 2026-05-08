@@ -51,6 +51,7 @@ import { toast } from 'sonner';
 import { Party, PartyType, LedgerEntry } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PrivacyValue } from '../components/PrivacyValue';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -332,13 +333,13 @@ export default function Parties() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase text-text-muted">Party Type</label>
-                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                    <div className="flex bg-muted p-1 rounded-lg">
                       <button
                         type="button"
                         onClick={() => setPartyType('customer')}
                         className={cn(
                           "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
-                          partyType === 'customer' ? "bg-white shadow-sm text-primary" : "text-text-muted"
+                          partyType === 'customer' ? "bg-card shadow-sm text-primary" : "text-text-muted"
                         )}
                       >
                         Customer
@@ -348,7 +349,7 @@ export default function Parties() {
                         onClick={() => setPartyType('supplier')}
                         className={cn(
                           "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
-                          partyType === 'supplier' ? "bg-white shadow-sm text-primary" : "text-text-muted"
+                          partyType === 'supplier' ? "bg-card shadow-sm text-primary" : "text-text-muted"
                         )}
                       >
                         Supplier
@@ -413,18 +414,22 @@ export default function Parties() {
       <div className="grid gap-5 md:grid-cols-3">
         <div className="stat-card">
           <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold mb-2">Total Receivable</div>
-          <div className="text-2xl font-bold text-success">{currency}{(totalReceivable || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-success">
+            <PrivacyValue value={(totalReceivable || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 text-text-muted">From {parties.filter(p => p.type === 'customer' && p.balance > 0).length} customers</div>
         </div>
         <div className="stat-card">
           <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold mb-2">Total Payable</div>
-          <div className="text-2xl font-bold text-danger">{currency}{(totalPayable || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-danger">
+            <PrivacyValue value={(totalPayable || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 text-text-muted">To {parties.filter(p => p.type === 'supplier' && p.balance < 0).length} suppliers</div>
         </div>
         <div className="stat-card">
           <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold mb-2">Net Balance</div>
           <div className={cn("text-2xl font-bold", (totalReceivable - totalPayable) >= 0 ? "text-primary" : "text-danger")}>
-            {currency}{((totalReceivable - totalPayable) || 0).toLocaleString()}
+            <PrivacyValue value={((totalReceivable - totalPayable) || 0).toLocaleString()} fieldId="financials" prefix={currency} />
           </div>
           <div className="text-[11px] mt-2 text-text-muted">Overall credit position</div>
         </div>
@@ -452,7 +457,7 @@ export default function Parties() {
 
         <div className="rounded-xl border border-border-main overflow-hidden">
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader className="bg-muted">
               <TableRow className="hover:bg-transparent border-border-main">
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Party Name</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Contact</TableHead>
@@ -463,7 +468,7 @@ export default function Parties() {
             </TableHeader>
             <TableBody>
               {filteredParties.map((party) => (
-                <TableRow key={party.id} className="border-border-main hover:bg-slate-50/50 transition-colors">
+                <TableRow key={party.id} className="border-border-main hover:bg-muted transition-colors">
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-bold text-text-main">{party.name}</span>
@@ -488,9 +493,9 @@ export default function Parties() {
                         "font-bold text-base",
                         party.balance > 0 ? "text-success" : party.balance < 0 ? "text-danger" : "text-text-main"
                       )}>
-                        {currency}{(Math.abs(party.balance) || 0).toLocaleString()}
+                        <PrivacyValue value={(Math.abs(party.balance) || 0).toLocaleString()} fieldId="party_balance" prefix={currency} />
                       </span>
-                      <span className="text-[10px] uppercase font-bold tracking-tighter">
+                      <span className="text-[10px] uppercase font-bold tracking-tighter text-text-muted">
                         {party.balance > 0 ? "Receivable" : party.balance < 0 ? "Payable" : "Settled"}
                       </span>
                     </div>
@@ -605,12 +610,15 @@ export default function Parties() {
                 <div className="text-xs text-text-muted mt-1">From: {selectedParty.name}</div>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border-4 border-slate-100 shadow-sm relative group">
+              <div className="bg-card p-4 rounded-xl border-4 border-muted shadow-sm relative group">
                 <QRCodeSVG 
                   value={`upi://pay?pa=${currentBusiness?.upiId}&pn=${encodeURIComponent(currentBusiness?.name || '')}&cu=INR&am=${Math.abs(selectedParty.balance)}`}
                   size={200}
                   level="H"
                   includeMargin={true}
+                  bgColor="transparent"
+                  fgColor="currentColor"
+                  className="text-foreground"
                 />
                 
                 {/* Hidden canvas for sharing */}
@@ -626,7 +634,7 @@ export default function Parties() {
                 </div>
               </div>
 
-              <div className="text-sm font-mono bg-slate-50 px-3 py-1.5 rounded border border-border-main text-text-muted">
+              <div className="text-sm font-mono bg-muted px-3 py-1.5 rounded border border-border-main text-text-muted">
                 UPI ID: {currentBusiness?.upiId}
               </div>
 
@@ -686,19 +694,19 @@ export default function Parties() {
           
           <div className="space-y-6 py-4">
             <div className="grid grid-cols-3 gap-4">
-              <div className="p-3 bg-slate-50 rounded-lg border border-border-main">
+              <div className="p-3 bg-muted rounded-lg border border-border-main">
                 <div className="text-[10px] text-text-muted uppercase font-bold">Current Balance</div>
                 <div className={cn("text-lg font-bold", (selectedParty?.balance || 0) >= 0 ? "text-success" : "text-danger")}>
                   {currency}{(Math.abs(selectedParty?.balance || 0)).toLocaleString()}
                 </div>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-border-main">
+              <div className="p-3 bg-muted rounded-lg border border-border-main">
                 <div className="text-[10px] text-text-muted uppercase font-bold">Total Credit</div>
                 <div className="text-lg font-bold text-success">
                   {currency}{ledger.filter(l => l.partyId === selectedParty?.id && l.type === 'credit').reduce((acc, l) => acc + l.amount, 0).toLocaleString()}
                 </div>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-border-main">
+              <div className="p-3 bg-muted rounded-lg border border-border-main">
                 <div className="text-[10px] text-text-muted uppercase font-bold">Total Debit</div>
                 <div className="text-lg font-bold text-danger">
                   {currency}{ledger.filter(l => l.partyId === selectedParty?.id && l.type === 'debit').reduce((acc, l) => acc + l.amount, 0).toLocaleString()}
@@ -706,7 +714,7 @@ export default function Parties() {
               </div>
             </div>
 
-            <form onSubmit={handleAddLedgerEntry} className="p-4 bg-slate-50 rounded-xl border border-border-main space-y-4">
+            <form onSubmit={handleAddLedgerEntry} className="p-4 bg-muted rounded-xl border border-border-main space-y-4">
               <div className="text-sm font-bold">Add Credit/Debit Entry</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="space-y-1">
@@ -754,7 +762,7 @@ export default function Parties() {
               <div className="text-sm font-bold">Recent History</div>
               <div className="rounded-lg border border-border-main overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-slate-50">
+                  <TableHeader className="bg-muted">
                     <TableRow>
                       <TableHead className="text-[10px] font-bold uppercase">Date</TableHead>
                       <TableHead className="text-[10px] font-bold uppercase">Description</TableHead>

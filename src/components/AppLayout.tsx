@@ -70,19 +70,24 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     const interval = setInterval(() => {
       const now = new Date();
       products.forEach(product => {
-        if (product.reminderEnabled && product.reminderDate) {
-          const reminderTime = new Date(product.reminderDate);
-          const diff = now.getTime() - reminderTime.getTime();
-          
-          // If reminder time has passed and we haven't shown it in this session
-          if (diff >= 0 && !shownReminders.has(product.id)) {
-            toast.info(`${product.name} need to check`, {
-              duration: 10000,
-              description: `Reminder scheduled for ${new Date(product.reminderDate).toLocaleString()}`
-            });
-            setShownReminders(prev => new Set(prev).add(product.id));
+        // Handle multiple reminders
+        product.reminders?.forEach(reminder => {
+          if (reminder.enabled && reminder.date) {
+            const reminderTime = new Date(reminder.date);
+            const diff = now.getTime() - reminderTime.getTime();
+            
+            const reminderKey = `${product.id}-${reminder.id}`;
+            
+            // If reminder time has passed and we haven't shown it in this session
+            if (diff >= 0 && !shownReminders.has(reminderKey)) {
+              toast.info(`${product.name}: ${reminder.title || 'Check needed'}`, {
+                duration: 10000,
+                description: `Reminder scheduled for ${new Date(reminder.date).toLocaleString()}`
+              });
+              setShownReminders(prev => new Set(prev).add(reminderKey));
+            }
           }
-        }
+        });
       });
     }, 10000); // Check every 10 seconds
 
@@ -207,7 +212,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     )}>
       <div className={cn("p-4 flex items-center", !isMobile && !isSidebarExpanded ? "justify-center" : "justify-between")}>
         {(!isMobile && !isSidebarExpanded) ? (
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">B</div>
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold">B</div>
         ) : (
           <h1 className="text-xl font-extrabold tracking-tight text-primary truncate">
             {currentBusiness?.name || 'Business Buddy'}
@@ -225,8 +230,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
               className={cn(
                 "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all border-l-4",
                 isActive 
-                  ? "bg-primary-light text-primary border-primary" 
-                  : "text-text-muted border-transparent hover:bg-slate-50 hover:text-text-main",
+                  ? "bg-primary/10 text-primary border-primary" 
+                  : "text-text-muted border-transparent hover:bg-muted/50 hover:text-text-main",
                 !isMobile && !isSidebarExpanded && "justify-center px-0 border-l-0"
               )}
               onClick={() => setIsMobileOpen(false)}
@@ -243,7 +248,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         <Button 
           variant="ghost" 
           className={cn(
-            "w-full text-text-muted hover:text-text-main hover:bg-slate-50 gap-3",
+            "w-full text-text-muted hover:text-text-main hover:bg-muted/50 gap-3",
             !isMobile && !isSidebarExpanded ? "justify-center px-0" : "justify-start"
           )}
           onClick={handleLogout}
@@ -269,12 +274,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-border-main px-4 md:px-8 flex items-center justify-between shadow-sm z-10">
+        <header className="h-16 bg-card border-b border-border-main px-4 md:px-8 flex items-center justify-between shadow-sm z-10">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileOpen(true)}>
               <Menu className="w-6 h-6" />
             </Button>
-            <div className="bg-slate-50 dark:bg-slate-800 px-3 py-1.5 border border-border-main rounded-md text-[13px] font-semibold flex items-center gap-2">
+            <div className="bg-muted px-3 py-1.5 border border-border-main rounded-md text-[13px] font-semibold flex items-center gap-2">
               <Building2 className="w-4 h-4 text-primary" />
               <span className="truncate max-w-[150px]">{currentBusiness?.name || 'Business Manager'}</span>
             </div>
@@ -289,7 +294,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             <DropdownMenu>
               <DropdownMenuTrigger render={
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 overflow-hidden border border-border-main">
-                  <div className="w-full h-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-full h-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
                     {currentBusiness?.name?.substring(0, 2).toUpperCase() || 'AD'}
                   </div>
                 </Button>
@@ -312,7 +317,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                   {(profile?.businesses || []).map(biz => (
                     <div key={biz.id} className="flex items-center group">
                       <DropdownMenuItem 
-                        className={cn("flex-1", biz.id === profile?.currentBusinessId && "bg-primary-light text-primary")}
+                        className={cn("flex-1", biz.id === profile?.currentBusinessId && "bg-primary/10 text-primary")}
                         onClick={() => switchBusiness(biz.id)}
                       >
                         <Building2 className="mr-2 h-4 w-4" />
@@ -365,7 +370,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 dark:bg-slate-950">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-background">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

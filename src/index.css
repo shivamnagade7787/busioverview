@@ -4,23 +4,23 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   
-  --color-primary: #2563eb;
-  --color-primary-light: #eff6ff;
-  --color-secondary: #64748b;
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary);
+  --color-secondary: var(--secondary);
   --color-success: #10b981;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
-  --color-background: #f1f5f9;
-  --color-card-bg: #ffffff;
-  --color-border-main: #e2e8f0;
-  --color-text-main: #0f172a;
-  --color-text-muted: #64748b;
-  --color-sidebar-bg: #ffffff;
+  --color-background: var(--background);
+  --color-card-bg: var(--card);
+  --color-border-main: var(--border);
+  --color-text-main: var(--foreground);
+  --color-text-muted: var(--muted-foreground);
+  --color-sidebar-bg: var(--sidebar);
 }
 
 @layer base {
   body {
-    @apply bg-background text-text-main font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 }
 

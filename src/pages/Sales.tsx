@@ -493,12 +493,12 @@ export default function Sales() {
               <div className="md:col-span-2 space-y-4">
                 <div className="rounded-lg border overflow-hidden">
                   <Table>
-                    <TableHeader className="bg-slate-50">
-                      <TableRow>
-                        <TableHead className="text-[10px] uppercase font-bold">Item</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold w-[120px]">Qty</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold text-right">Price</TableHead>
-                        <TableHead className="text-[10px] uppercase font-bold text-right">Total</TableHead>
+                    <TableHeader className="bg-muted">
+                      <TableRow className="border-border-main">
+                        <TableHead className="text-[10px] uppercase font-bold text-text-muted">Item</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold w-[120px] text-text-muted">Qty</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold text-right text-text-muted">Price</TableHead>
+                        <TableHead className="text-[10px] uppercase font-bold text-right text-text-muted">Total</TableHead>
                         <TableHead className="w-[40px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -661,22 +661,22 @@ export default function Sales() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-text-muted">Sub Total</span>
-                      <span>{currency}{(totals.subTotal || 0).toLocaleString()}</span>
+                      <span><PrivacyValue value={(totals.subTotal || 0).toLocaleString()} fieldId="financials" prefix={currency} /></span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-text-muted">Tax (GST)</span>
-                      <span>{currency}{(totals.taxTotal || 0).toLocaleString()}</span>
+                      <span><PrivacyValue value={(totals.taxTotal || 0).toLocaleString()} fieldId="financials" prefix={currency} /></span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-text-muted">Discount</span>
-                      <span className="text-danger">-{currency}{(totals.discountTotal || 0).toLocaleString()}</span>
+                      <span className="text-danger">- <PrivacyValue value={(totals.discountTotal || 0).toLocaleString()} fieldId="financials" prefix={currency} /></span>
                     </div>
-                    <div className="flex justify-between text-base font-bold pt-2 border-t">
+                    <div className="flex justify-between text-base font-bold pt-2 border-t border-border-main">
                       <span>Grand Total</span>
-                      <span className="text-primary">{currency}{(totals.grandTotal || 0).toLocaleString()}</span>
+                      <span className="text-primary"><PrivacyValue value={(totals.grandTotal || 0).toLocaleString()} fieldId="financials" prefix={currency} /></span>
                     </div>
                   </div>
                 </div>
@@ -713,7 +713,7 @@ export default function Sales() {
 
         <div className="rounded-xl border border-border-main overflow-hidden">
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader className="bg-muted">
               <TableRow className="hover:bg-transparent border-border-main">
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Invoice Info</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Customer</TableHead>
@@ -724,7 +724,7 @@ export default function Sales() {
             </TableHeader>
             <TableBody>
               {invoices.filter(inv => inv.type === 'sale').map((inv) => (
-                <TableRow key={inv.id} className="border-border-main hover:bg-slate-50/50 transition-colors">
+                <TableRow key={inv.id} className="border-border-main hover:bg-muted transition-colors">
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-bold text-text-main">{inv.invoiceNumber}</span>
@@ -735,7 +735,7 @@ export default function Sales() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
+                      <div className="w-7 h-7 bg-muted rounded-full flex items-center justify-center text-[10px] font-bold text-primary border border-border-main">
                         {inv.partyId === 'walk-in' ? 'WC' : parties.find(p => p.id === inv.partyId)?.name.substring(0, 2).toUpperCase() || '??'}
                       </div>
                       <span className="text-sm font-medium">

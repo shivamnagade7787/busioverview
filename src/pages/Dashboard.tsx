@@ -113,8 +113,8 @@ export default function Dashboard() {
           <h2 className="text-3xl font-bold tracking-tight">Business Overview</h2>
           <p className="text-muted-foreground">Real-time insights into your sales, credit, and inventory.</p>
         </div>
-        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-border-main shadow-sm">
-          <div className="px-3 py-1.5 text-xs font-bold text-primary bg-primary-light rounded-md">Last 30 Days</div>
+        <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border-main shadow-sm">
+          <div className="px-3 py-1.5 text-xs font-bold text-primary bg-primary/10 rounded-md">Last 30 Days</div>
           <div className="px-3 py-1.5 text-xs font-bold text-text-muted hover:text-text-main cursor-pointer">This Year</div>
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="flex justify-between items-start mb-2">
             <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold">Total Sales</div>
-            <div className="p-1.5 bg-primary-light rounded-lg text-primary">
+            <div className="p-1.5 bg-muted rounded-lg text-primary border border-border-main">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="flex justify-between items-start mb-2">
             <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold">Total Expenses</div>
-            <div className="p-1.5 bg-danger/10 rounded-lg text-danger">
+            <div className="p-1.5 bg-muted rounded-lg text-danger border border-border-main">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
@@ -153,7 +153,7 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="flex justify-between items-start mb-2">
             <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold">To Receive</div>
-            <div className="p-1.5 bg-success/10 rounded-lg text-success">
+            <div className="p-1.5 bg-muted rounded-lg text-success border border-border-main">
               <Users className="w-4 h-4" />
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="flex justify-between items-start mb-2">
             <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold">To Pay</div>
-            <div className="p-1.5 bg-amber-100 rounded-lg text-amber-700">
+            <div className="p-1.5 bg-muted rounded-lg text-amber-500 border border-border-main">
               <ShoppingCart className="w-4 h-4" />
             </div>
           </div>
@@ -183,11 +183,13 @@ export default function Dashboard() {
         <div className="stat-card">
           <div className="flex justify-between items-start mb-2">
             <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold">Online Sales (UPI)</div>
-            <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+            <div className="p-1.5 bg-muted rounded-lg text-primary border border-border-main">
               <QrCode className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-indigo-600">{currency}{(stats.onlineSales || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-indigo-600">
+            <PrivacyValue value={(stats.onlineSales || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 text-text-muted font-medium">
             Via UPI Payments
           </div>
@@ -233,8 +235,8 @@ export default function Dashboard() {
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                 />
-                <Area type="monotone" dataKey="sales" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
-                <Area type="monotone" dataKey="purchases" stroke="#cbd5e1" strokeWidth={2} fill="transparent" />
+                <Area type="monotone" dataKey="sales" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                <Area type="monotone" dataKey="purchases" stroke="var(--muted-foreground)" strokeWidth={2} fill="transparent" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -247,9 +249,9 @@ export default function Dashboard() {
           </div>
           <div className="space-y-4">
             {products.filter(p => p.stockQuantity <= (p.lowStockAlert || 0)).slice(0, 5).map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-border-main hover:bg-slate-50 transition-colors">
+              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-border-main hover:bg-muted transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-text-muted">
+                  <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center text-text-muted">
                     <Package className="w-4 h-4" />
                   </div>
                   <div>
@@ -314,9 +316,9 @@ export default function Dashboard() {
             <button className="text-[11px] text-primary font-bold uppercase tracking-wider hover:underline">Manage</button>
           </div>
           <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 bg-primary-light rounded-xl border border-primary/10">
+            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border border-primary/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-primary shadow-sm">
+                <div className="w-10 h-10 bg-card rounded-lg flex items-center justify-center text-primary shadow-sm">
                   <Wallet className="w-5 h-5" />
                 </div>
                 <div>

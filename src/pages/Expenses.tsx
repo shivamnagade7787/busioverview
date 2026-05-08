@@ -37,6 +37,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { collection, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { PrivacyValue } from '../components/PrivacyValue';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { toast } from 'sonner';
 import { Expense, PaymentMode } from '@/src/types';
@@ -221,7 +222,9 @@ export default function Expenses() {
       <div className="grid gap-5 md:grid-cols-3">
         <div className="stat-card">
           <div className="text-[12px] text-text-muted uppercase tracking-wider font-bold mb-2">Total Expenses</div>
-          <div className="text-2xl font-bold text-danger">{currency}{(totalExpenses || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-danger">
+            <PrivacyValue value={(totalExpenses || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 text-text-muted flex items-center gap-1">
             <TrendingDown className="w-3 h-3" /> Money going out
           </div>
@@ -246,22 +249,22 @@ export default function Expenses() {
       <div className="panel-card">
         <div className="rounded-xl border border-border-main overflow-hidden">
           <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow className="hover:bg-transparent border-border-main">
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent border-border-main text-text-muted">
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Date</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Category</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Notes</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Mode</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted text-right">Amount</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
+                <TableHead className="w-[80px] text-text-muted"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {expenses.map((e) => (
-                <TableRow key={e.id} className="border-border-main hover:bg-slate-50/50 transition-colors">
+                <TableRow key={e.id} className="border-border-main hover:bg-muted transition-colors">
                   <TableCell className="text-sm">{new Date(e.date).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[11px] font-bold uppercase">
+                    <span className="px-2 py-1 bg-muted text-text-muted rounded text-[11px] font-bold uppercase border border-border-main">
                       {e.category}
                     </span>
                   </TableCell>
@@ -270,7 +273,7 @@ export default function Expenses() {
                     <span className="text-[10px] uppercase font-bold text-text-muted">{e.paymentMode}</span>
                   </TableCell>
                   <TableCell className="text-right font-bold text-danger">
-                    {currency}{(e.amount || 0).toLocaleString()}
+                    <PrivacyValue value={(e.amount || 0).toLocaleString()} fieldId="financials" prefix={currency} />
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

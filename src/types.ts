@@ -68,6 +68,13 @@ export interface Party {
   createdAt: string;
 }
 
+export interface ProductReminder {
+  id: string;
+  title: string;
+  date: string;
+  enabled: boolean;
+}
+
 export interface Product {
   id: string;
   userId: string;
@@ -82,8 +89,7 @@ export interface Product {
   category?: string;
   unit?: string;
   makingDate?: string;
-  reminderEnabled?: boolean;
-  reminderDate?: string;
+  reminders?: ProductReminder[];
   createdAt: string;
 }
 
