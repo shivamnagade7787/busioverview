@@ -44,6 +44,7 @@ import { toast } from 'sonner';
 import { Product } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { convertToNumeric } from '@/src/lib/mappingService';
+import { PrivacyValue } from '../components/PrivacyValue';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -413,7 +414,7 @@ export default function Inventory() {
                         "font-bold",
                         product.stockQuantity <= (product.lowStockAlert || 0) ? "text-danger" : "text-text-main"
                       )}>
-                        {product.stockQuantity} {product.unit}
+                        <PrivacyValue value={product.stockQuantity} fieldId="stock" suffix={` ${product.unit || 'Units'}`} />
                       </span>
                       {product.makingDate && (
                         <span className="text-[10px] text-text-muted font-bold uppercase">MFG: {product.makingDate}</span>
@@ -425,7 +426,7 @@ export default function Inventory() {
                   </TableCell>
                   <TableCell className="text-right">
                     <span className="font-bold text-text-main">
-                      {currency}{(product.salePrice || 0).toLocaleString()}
+                      <PrivacyValue value={(product.salePrice || 0).toLocaleString()} fieldId="sale_price" prefix={currency} />
                     </span>
                   </TableCell>
                   <TableCell>

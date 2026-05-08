@@ -51,7 +51,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { convertToNumeric } from '@/src/lib/mappingService';
-import { InventorySettings } from '../types';
+import { cn } from '@/lib/utils';
+import { InventorySettings, PrivacySettings } from '../types';
+import { PrivacyValue } from '@/src/components/PrivacyValue';
 
 export default function Settings() {
   const { user, profile, currentBusiness } = useAuth();
@@ -99,6 +101,37 @@ export default function Settings() {
     const newMappings = { ...invSettings.mappings };
     delete newMappings[code];
     setInvSettings(prev => ({ ...prev, mappings: newMappings }));
+  };
+
+  // Privacy Settings State
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(
+    currentBusiness?.privacySettings || {
+      hideNumericValues: false,
+      visibilityMode: 'mask',
+      customReplaceText: 'Confidential',
+      hiddenFields: [],
+      requirePinToReveal: false,
+      privacyPin: ''
+    }
+  );
+
+  const availablePrivacyFields = [
+    { id: 'purchase_price', label: 'Purchase Costs/Prices' },
+    { id: 'sale_price', label: 'Sale Prices/Rates' },
+    { id: 'profit', label: 'Margins & Profits' },
+    { id: 'stock', label: 'Stock Quantities' },
+    { id: 'totals', label: 'Grand Totals & Subtotals' },
+    { id: 'financials', label: 'Financial Reports/Dashboards' },
+    { id: 'party_balance', label: 'Customer/Supplier Balances' }
+  ];
+
+  const toggleHiddenField = (fieldId: string) => {
+    setPrivacySettings(prev => ({
+      ...prev,
+      hiddenFields: prev.hiddenFields.includes(fieldId)
+        ? prev.hiddenFields.filter(f => f !== fieldId)
+        : [...prev.hiddenFields, fieldId]
+    }));
   };
 
   const handleExportMappings = () => {
@@ -163,7 +196,8 @@ export default function Settings() {
       const updatedBusiness = { 
         ...currentBusiness,
         name, currency, gstNumber, address, phone, upiId, invoiceTemplate, language,
-        inventorySettings: invSettings
+        inventorySettings: invSettings,
+        privacySettings: privacySettings
       };
 
       const updatedBusinesses = profile.businesses.map(b => 
@@ -381,6 +415,135 @@ export default function Settings() {
                   >
                     <Copy className="w-3 h-3" />
                   </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="md:col-span-3">
+          <div className="panel-card">
+            <div className="text-base font-bold mb-6 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              Field Visibility & Private Controls
+            </div>
+
+            <div className="space-y-8">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold">Global Privacy Mode</Label>
+                      <p className="text-[11px] text-text-muted">Hide numeric values across selected modules.</p>
+                    </div>
+                    <Switch 
+                      checked={privacySettings.hideNumericValues}
+                      onCheckedChange={(val) => setPrivacySettings(prev => ({ ...prev, hideNumericValues: val }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[13px] font-semibold">Visibility Mode</Label>
+                    <Select 
+                      value={privacySettings.visibilityMode} 
+                      onValueChange={(val: any) => setPrivacySettings(prev => ({ ...prev, visibilityMode: val }))}
+                    >
+                      <SelectTrigger className="border-border-main">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mask">Mask (******)</SelectItem>
+                        <SelectItem value="partial">Partial (₹2****)</SelectItem>
+                        <SelectItem value="replace">Custom Text</SelectItem>
+                        <SelectItem value="blur">Blur Overlay</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {privacySettings.visibilityMode === 'replace' && (
+                    <div className="space-y-2">
+                      <Label className="text-[13px] font-semibold">Custom Mask Text</Label>
+                      <Input 
+                        value={privacySettings.customReplaceText}
+                        onChange={(e) => setPrivacySettings(prev => ({ ...prev, customReplaceText: e.target.value }))}
+                        placeholder="e.g. Hidden"
+                        className="border-border-main"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-border-main">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold">Require PIN to Reveal</Label>
+                      <p className="text-[11px] text-text-muted">Users must enter PIN to view hidden values.</p>
+                    </div>
+                    <Switch 
+                      checked={privacySettings.requirePinToReveal}
+                      onCheckedChange={(val) => setPrivacySettings(prev => ({ ...prev, requirePinToReveal: val }))}
+                    />
+                  </div>
+
+                  {privacySettings.requirePinToReveal && (
+                    <div className="space-y-2">
+                      <Label className="text-[13px] font-semibold">Privacy PIN (Numbers Only)</Label>
+                      <Input 
+                        type="password"
+                        maxLength={6}
+                        value={privacySettings.privacyPin}
+                        onChange={(e) => setPrivacySettings(prev => ({ ...prev, privacyPin: e.target.value }))}
+                        placeholder="Set PIN"
+                        className="border-border-main"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-sm font-bold">Select Fields to Hide</Label>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {availablePrivacyFields.map((field) => (
+                    <div 
+                      key={field.id}
+                      onClick={() => toggleHiddenField(field.id)}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+                        privacySettings.hiddenFields.includes(field.id) 
+                          ? "bg-primary/10 border-primary text-primary" 
+                          : "bg-white border-border-main hover:bg-slate-50"
+                      )}
+                    >
+                      <span className="text-xs font-bold">{field.label}</span>
+                      <Switch 
+                        checked={privacySettings.hiddenFields.includes(field.id)}
+                        onCheckedChange={() => toggleHiddenField(field.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel-card bg-slate-50 border-border-main p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "p-2 rounded-lg",
+                    privacySettings.hideNumericValues ? "bg-primary/20 text-primary" : "bg-slate-200 text-slate-500"
+                  )}>
+                    <Info className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold block">Live Preview Check</span>
+                    <span className="text-xs text-text-muted">Check how your values appear below:</span>
+                  </div>
+                </div>
+                <div className="text-xl font-bold bg-white px-6 py-2 rounded-lg border shadow-sm">
+                  <PrivacyValue 
+                    value="₹1,25,000" 
+                    fieldId={privacySettings.hiddenFields[0] || 'totals'} 
+                    className="text-primary"
+                  />
                 </div>
               </div>
             </div>

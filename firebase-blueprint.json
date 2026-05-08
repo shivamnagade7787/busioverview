@@ -25,6 +25,17 @@
             }
           }
         },
+        "privacySettings": {
+          "type": "object",
+          "properties": {
+            "hideNumericValues": { "type": "boolean" },
+            "visibilityMode": { "type": "string", "enum": ["mask", "partial", "replace", "blur"] },
+            "customReplaceText": { "type": "string" },
+            "hiddenFields": { "type": "array", "items": { "type": "string" } },
+            "requirePinToReveal": { "type": "boolean" },
+            "privacyPin": { "type": "string" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "businessName", "currency", "createdAt"]

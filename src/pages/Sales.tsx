@@ -56,6 +56,7 @@ import { toast } from 'sonner';
 import { Invoice, InvoiceItem, Party, Product, InvoiceType, PaymentMode } from '@/src/types';
 import { cn } from '@/lib/utils';
 import { convertToNumeric } from '@/src/lib/mappingService';
+import { PrivacyValue } from '../components/PrivacyValue';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -754,7 +755,7 @@ export default function Sales() {
                   </TableCell>
                   <TableCell className="text-right">
                     <span className="font-bold text-text-main">
-                      {currency}{(inv.grandTotal || 0).toLocaleString()}
+                      <PrivacyValue value={(inv.grandTotal || 0).toLocaleString()} fieldId="totals" prefix={currency} />
                     </span>
                   </TableCell>
                   <TableCell>

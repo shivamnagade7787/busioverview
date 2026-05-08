@@ -39,6 +39,7 @@ import {
   Area
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { PrivacyValue } from '../components/PrivacyValue';
 
 export default function Dashboard() {
   const { invoices, parties, products, expenses, bankAccounts, loading } = useBusiness();
@@ -126,7 +127,9 @@ export default function Dashboard() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-text-main">{currency}{(stats.totalSales || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-text-main">
+            <PrivacyValue value={(stats.totalSales || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 flex items-center gap-1 text-success font-medium">
             <ArrowUpRight className="w-3 h-3" /> +12.5% vs last month
           </div>
@@ -139,7 +142,9 @@ export default function Dashboard() {
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-text-main">{currency}{(stats.totalExpenses || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-text-main">
+            <PrivacyValue value={(stats.totalExpenses || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 flex items-center gap-1 text-danger font-medium">
             <ArrowDownRight className="w-3 h-3" /> -2.3% vs last month
           </div>
@@ -152,7 +157,9 @@ export default function Dashboard() {
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-success">{currency}{(stats.receivable || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-success">
+            <PrivacyValue value={(stats.receivable || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 text-text-muted font-medium">
             From {parties.filter(p => p.type === 'customer' && p.balance > 0).length} customers
           </div>
@@ -165,7 +172,9 @@ export default function Dashboard() {
               <ShoppingCart className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-danger">{currency}{(stats.payable || 0).toLocaleString()}</div>
+          <div className="text-2xl font-bold text-danger">
+            <PrivacyValue value={(stats.payable || 0).toLocaleString()} fieldId="financials" prefix={currency} />
+          </div>
           <div className="text-[11px] mt-2 text-text-muted font-medium">
             To {parties.filter(p => p.type === 'supplier' && p.balance < 0).length} suppliers
           </div>

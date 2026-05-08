@@ -18,6 +18,17 @@ export interface InventorySettings {
   allowDecimals?: boolean;
 }
 
+export type VisibilityMode = 'mask' | 'partial' | 'replace' | 'blur';
+
+export interface PrivacySettings {
+  hideNumericValues: boolean;
+  visibilityMode: VisibilityMode;
+  customReplaceText?: string;
+  hiddenFields: string[]; // e.g., 'purchase_price', 'sale_price', 'profit', 'stock', 'totals', 'grand_total'
+  requirePinToReveal?: boolean;
+  privacyPin?: string;
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -30,6 +41,7 @@ export interface Business {
   invoiceTemplate?: 'classic' | 'modern' | 'compact' | 'professional';
   language?: 'en' | 'mr';
   inventorySettings?: InventorySettings;
+  privacySettings?: PrivacySettings;
 }
 
 export interface UserProfile {
