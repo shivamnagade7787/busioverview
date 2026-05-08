@@ -438,7 +438,6 @@ export default function Inventory() {
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Product Details</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Category</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted">Stock</TableHead>
-                <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted text-right">Purchase Price</TableHead>
                 <TableHead className="font-bold uppercase text-[11px] tracking-wider text-text-muted text-right">Sale Price</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
@@ -479,11 +478,6 @@ export default function Inventory() {
                         </span>
                       )}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="font-bold text-text-muted">
-                      <PrivacyValue value={(product.purchasePrice || 0).toLocaleString()} fieldId="purchase_price" prefix={currency} />
-                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <span className="font-bold text-text-main">
